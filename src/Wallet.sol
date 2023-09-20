@@ -35,8 +35,8 @@ contract Wallet {
     function _execute(address to, uint256 val, bytes memory data, Op op) internal {
         emit Execute(to, val, data);
 
-        if (op == Op.call) {
-            assembly ("memory-safe") {
+        assembly ("memory-safe") {
+            if eq(op, 0) {
                 // Perform a `call()` with the given parameters.
                 let success := call(gas(), to, val, add(data, 0x20), mload(data), gas(), 0x00)
                 // Copy the returned data to memory.
@@ -46,8 +46,7 @@ contract Wallet {
                 // Otherwise, return the data.
                 return(0x00, returndatasize())
             }
-        } else if (op == Op.delegatecall) {
-            assembly ("memory-safe") {
+            if eq(op, 1) {
                 // Perform a `delegatecall()` with the given parameters.
                 let success := delegatecall(gas(), to, add(data, 0x20), mload(data), gas(), 0x00)
                 // Copy the returned data to memory.
@@ -57,8 +56,7 @@ contract Wallet {
                 // Otherwise, return the data.
                 return(0x00, returndatasize())
             }
-        } else {
-            assembly ("memory-safe") {
+            if eq(op, 2) {
                 // `create()` a new contract with the given parameters.
                 let created := create(val, add(data, 0x20), mload(data))
                 // Revert if contract creation was unsuccessful.
