@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.19;
 
-contract NaniWallet {
+contract Wallet {
     event Executed(address indexed to, uint256 val, bytes data);
     event ValidatorUpdated(address indexed validator);
 
@@ -15,11 +15,11 @@ contract NaniWallet {
     }
 
     address public validator;
-    address immutable public owner;
+    address public immutable owner;
     bytes32 immutable domainSeparator = keccak256(
         abi.encode(
             keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-            keccak256(bytes("NaniWallet")),
+            keccak256(bytes("Wallet")),
             keccak256("1"),
             block.chainid,
             address(this)
@@ -29,8 +29,9 @@ contract NaniWallet {
     // Constructor...
     constructor(address _owner, address _validator) payable {
         owner = _owner;
-        if (_validator != address(0)) 
-        validator = _validator;
+        if (_validator != address(0)) {
+            validator = _validator;
+        }
     }
 
     // Execute Op...
@@ -39,24 +40,14 @@ contract NaniWallet {
         _execute(to, val, data, op);
     }
 
-    function execute(
-        address to, 
-        uint256 val, 
-        bytes calldata data, 
-        Op op, 
-        bytes calldata sig
-    ) public payable {
+    function execute(address to, uint256 val, bytes calldata data, Op op, bytes calldata sig) public payable {
         bytes32 hash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
                 domainSeparator,
                 keccak256(
                     abi.encode(
-                        keccak256("Execute(address to,uint256 val,bytes data,uint8 op)"),
-                        to,
-                        val,
-                        keccak256(data),
-                        op
+                        keccak256("Execute(address to,uint256 val,bytes data,uint8 op)"), to, val, keccak256(data), op
                     )
                 )
             )
@@ -84,11 +75,9 @@ contract NaniWallet {
                 return(0x00, returndatasize())
             }
         } else {
-             assembly {
+            assembly {
                 let created := create(val, add(data, 0x20), mload(data))
-                if iszero(created) {
-                    revert(0x00, 0x00)
-                }
+                if iszero(created) { revert(0x00, 0x00) }
                 mstore(0x00, created)
                 return(0x00, 0x20)
             }
@@ -140,10 +129,9 @@ contract NaniWallet {
             userOpHash := keccak256(0x04, 0x3c) // `32 * 2 - (32 - 28) = 60 = 0x3c`.
         }
 
-        validator == address(0) ?
-            validationData = isValidSignatureNowCalldata(owner, userOpHash, userOp.signature) ? 0 : 1
-            :
-            validationData = NaniWallet(payable(validator)).validateUserOp(userOp, userOpHash, missingAccountFunds);
+        validator == address(0)
+            ? validationData = isValidSignatureNowCalldata(owner, userOpHash, userOp.signature) ? 0 : 1
+            : validationData = Wallet(payable(validator)).validateUserOp(userOp, userOpHash, missingAccountFunds);
 
         if (missingAccountFunds != 0) {
             assembly {
@@ -199,47 +187,47 @@ struct UserOperation {
 }
 
 function isValidSignatureNowCalldata(address signer, bytes32 hash, bytes calldata signature)
-        view
-        returns (bool isValid)
-    {
-        assembly ("memory-safe") {
-            // Clean the upper 96 bits of `signer` in case they are dirty.
-            for { signer := shr(96, shl(96, signer)) } signer {} {
-                let m := mload(0x40)
-                if eq(signature.length, 65) {
-                    mstore(0x00, hash)
-                    mstore(0x20, byte(0, calldataload(add(signature.offset, 0x40)))) // `v`.
-                    calldatacopy(0x40, signature.offset, 0x40) // `r`, `s`.
-                    let t :=
-                        staticcall(
-                            gas(), // Amount of gas left for the transaction.
-                            1, // Address of `ecrecover`.
-                            0x00, // Start of input.
-                            0x80, // Size of input.
-                            0x01, // Start of output.
-                            0x20 // Size of output.
-                        )
-                    // `returndatasize()` will be `0x20` upon success, and `0x00` otherwise.
-                    if iszero(or(iszero(returndatasize()), xor(signer, mload(t)))) {
-                        isValid := 1
-                        mstore(0x60, 0) // Restore the zero slot.
-                        mstore(0x40, m) // Restore the free memory pointer.
-                        break
-                    }
+    view
+    returns (bool isValid)
+{
+    assembly ("memory-safe") {
+        // Clean the upper 96 bits of `signer` in case they are dirty.
+        for { signer := shr(96, shl(96, signer)) } signer {} {
+            let m := mload(0x40)
+            if eq(signature.length, 65) {
+                mstore(0x00, hash)
+                mstore(0x20, byte(0, calldataload(add(signature.offset, 0x40)))) // `v`.
+                calldatacopy(0x40, signature.offset, 0x40) // `r`, `s`.
+                let t :=
+                    staticcall(
+                        gas(), // Amount of gas left for the transaction.
+                        1, // Address of `ecrecover`.
+                        0x00, // Start of input.
+                        0x80, // Size of input.
+                        0x01, // Start of output.
+                        0x20 // Size of output.
+                    )
+                // `returndatasize()` will be `0x20` upon success, and `0x00` otherwise.
+                if iszero(or(iszero(returndatasize()), xor(signer, mload(t)))) {
+                    isValid := 1
+                    mstore(0x60, 0) // Restore the zero slot.
+                    mstore(0x40, m) // Restore the free memory pointer.
+                    break
                 }
-                mstore(0x60, 0) // Restore the zero slot.
-                mstore(0x40, m) // Restore the free memory pointer.
+            }
+            mstore(0x60, 0) // Restore the zero slot.
+            mstore(0x40, m) // Restore the free memory pointer.
 
-                let f := shl(224, 0x1626ba7e)
-                mstore(m, f) // `bytes4(keccak256("isValidSignature(bytes32,bytes)"))`.
-                mstore(add(m, 0x04), hash)
-                let d := add(m, 0x24)
-                mstore(d, 0x40) // The offset of the `signature` in the calldata.
-                mstore(add(m, 0x44), signature.length)
-                // Copy the `signature` over.
-                calldatacopy(add(m, 0x64), signature.offset, signature.length)
-                // forgefmt: disable-next-item
-                isValid := and(
+            let f := shl(224, 0x1626ba7e)
+            mstore(m, f) // `bytes4(keccak256("isValidSignature(bytes32,bytes)"))`.
+            mstore(add(m, 0x04), hash)
+            let d := add(m, 0x24)
+            mstore(d, 0x40) // The offset of the `signature` in the calldata.
+            mstore(add(m, 0x44), signature.length)
+            // Copy the `signature` over.
+            calldatacopy(add(m, 0x64), signature.offset, signature.length)
+            // forgefmt: disable-next-item
+            isValid := and(
                     // Whether the returndata is the magic value `0x1626ba7e` (left-aligned).
                     eq(mload(d), f),
                     // Whether the staticcall does not revert.
@@ -254,7 +242,7 @@ function isValidSignatureNowCalldata(address signer, bytes32 hash, bytes calldat
                         0x20 // Length of returndata to write.
                     )
                 )
-                break
-            }
+            break
         }
     }
+}
