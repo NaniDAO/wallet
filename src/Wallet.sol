@@ -105,9 +105,11 @@ contract Wallet {
     {
         if (msg.sender != entryPoint) revert Unauthorized();
 
-        validator == address(0)
-            ? validationData = isValidSignatureNowCalldata(owner, userOpHash, userOp.signature) ? 0 : 1
-            : validationData = Wallet(payable(validator)).validateUserOp(userOp, userOpHash, missingAccountFunds);
+        if (validator == address(0)) {
+            validationData = isValidSignatureNowCalldata(owner, userOpHash, userOp.signature) ? 0 : 1;
+        } else {
+            validationData = Wallet(payable(validator)).validateUserOp(userOp, userOpHash, missingAccountFunds);
+        }
 
         if (missingAccountFunds != 0) {
             assembly {
