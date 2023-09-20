@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 contract Wallet {
-    event Execute(address indexed to, uint256 val, bytes data, uint256 nonce);
+    event Execute(address indexed to, uint256 val, bytes data, uint256 indexed nonce);
     event UpdateValidator(address indexed validator);
 
     error InvalidSignature();
