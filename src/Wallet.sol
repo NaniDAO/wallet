@@ -69,18 +69,10 @@ contract Wallet {
 
     function onERC721Received(address, address, uint256, bytes calldata) public payable returns (bytes4) {
         return this.onERC721Received.selector;
-        /*assembly {
-            // Set the return data to be 0x150b7a02
-            mstore(0x00, 0x150b7a0200000000000000000000000000000000000000000000000000000000)
-            return(0x00, 0x20)
-        }*/
     }
 
     function onERC1155Received(address, address, uint256, uint256, bytes calldata) public payable returns (bytes4) {
-        assembly ("memory-safe") {
-            mstore(0x00, 0x4e2312e0) // `ERC1155Received`.
-            return(0x00, 0x04) // Return 4 bytes.
-        }
+        return this.onERC1155Received.selector;
     }
 
     function onERC1155BatchReceived(address, address, uint256[] calldata, uint256[] calldata, bytes calldata)
@@ -88,10 +80,7 @@ contract Wallet {
         payable
         returns (bytes4)
     {
-        assembly ("memory-safe") {
-            mstore(0x00, 0xeb9a5567) // `ERC1155BatchReceived`.
-            return(0x00, 0x04) // Return 4 bytes.
-        }
+        return this.onERC1155BatchReceived.selector;
     }
 
     // eip-165...
