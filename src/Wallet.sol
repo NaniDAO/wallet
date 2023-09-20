@@ -29,7 +29,7 @@ contract Wallet {
         bytes memory dataMem = data; // Copy `data` from calldata.
 
         assembly ("memory-safe") {
-            // Log Event: `keccak256(bytes("Execute(address,uint256,bytes)"))`.
+            // Emit: `keccak256(bytes("Execute(address,uint256,bytes)"))`.
             log2(
                 add(dataMem, 0x20),
                 mload(dataMem),
@@ -129,27 +129,14 @@ contract Wallet {
 
         assembly ("memory-safe") {
             sstore(0, _validator)
+            log2(
+                mload(0x40), // Empty data location.
+                0x0, // Data size.
+                0x1e1fec57c7820d1f8245ceb19d2d2fd5d03b4b7b165475077ea520162ce40743, // Event signature hash.
+                _validator // Indexed _validator.
+            )
         }
-
-        emit UpdateValidator(_validator);
     }
-    /*
-        assembly ("memory-safe") {
-            // Store the new validator in the first storage slot (0x00).
-            sstore(0x00, _validator)
-            // Prepare data for the log
-            mstore(0x00, _validator)
-            // Emit the UpdateValidator event.
-            log1(0x00, 0x20, 0x1e1fec57c7820d1f8245ceb19d2d2fd5d03b4b7b165475077ea520162ce40743)
-        }*/
-
-    // Log Event: `keccak256(bytes("Execute(address,uint256,bytes)"))`.
-    /*    log2(
-                add(dataMem, 0x20),
-                mload(dataMem),
-                0x4a0de09071d37e2800c1dcc9027a0030cd5202f3a5a766952307470adc640c57,
-                to
-            )*/
 }
 
 import "./Meta.sol";
