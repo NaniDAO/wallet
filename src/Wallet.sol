@@ -2,8 +2,8 @@
 pragma solidity ^0.8.19;
 
 contract Wallet {
-    event Executed(address indexed to, uint256 val, bytes data);
-    event ValidatorUpdated(address indexed validator);
+    event Execute(address indexed to, uint256 val, bytes data, uint256 nonce);
+    event UpdateValidator(address indexed validator);
 
     error InvalidSignature();
     error Unauthorized();
@@ -26,6 +26,8 @@ contract Wallet {
         )
     );
 
+    uint256 public nonce;
+
     // Constructor...
     constructor(address _owner, address _validator) payable {
         owner = _owner;
@@ -37,17 +39,28 @@ contract Wallet {
     // Execute Op...
     function execute(address to, uint256 val, bytes calldata data, Op op) public payable {
         if (msg.sender != owner) if (msg.sender != entryPoint) revert Unauthorized();
+        emit Execute(to, val, data, type(uint256).max);
         _execute(to, val, data, op);
     }
 
     function execute(address to, uint256 val, bytes calldata data, Op op, bytes calldata sig) public payable {
+        uint256 txNonce;
+        unchecked {
+            emit Execute(to, val, data, txNonce = nonce++);
+        }
+
         bytes32 hash = keccak256(
             abi.encodePacked(
                 "\x19\x01",
                 domainSeparator,
                 keccak256(
                     abi.encode(
-                        keccak256("Execute(address to,uint256 val,bytes data,uint8 op)"), to, val, keccak256(data), op
+                        keccak256("Execute(address to,uint256 val,bytes data,uint8 op,uint256 nonce)"),
+                        to,
+                        val,
+                        keccak256(data),
+                        op,
+                        txNonce
                     )
                 )
             )
@@ -59,23 +72,22 @@ contract Wallet {
     }
 
     function _execute(address to, uint256 val, bytes memory data, Op op) internal {
-        emit Executed(to, val, data);
         if (op == Op.call) {
-            assembly {
+            assembly ("memory-safe") {
                 let success := call(gas(), to, val, add(data, 0x20), mload(data), gas(), 0x00)
                 returndatacopy(0x00, 0x00, returndatasize())
                 if iszero(success) { revert(0x00, returndatasize()) }
                 return(0x00, returndatasize())
             }
         } else if (op == Op.delegatecall) {
-            assembly {
+            assembly ("memory-safe") {
                 let success := delegatecall(gas(), to, add(data, 0x20), mload(data), gas(), 0x00)
                 returndatacopy(0x00, 0x00, returndatasize())
                 if iszero(success) { revert(0x00, returndatasize()) }
                 return(0x00, returndatasize())
             }
         } else {
-            assembly {
+            assembly ("memory-safe") {
                 let created := create(val, add(data, 0x20), mload(data))
                 if iszero(created) { revert(0x00, 0x00) }
                 mstore(0x00, created)
@@ -155,7 +167,7 @@ contract Wallet {
         )
     {
         fields = hex"0f"; // `0b01111`.
-        (name, version) = ("NaniWallet", "1");
+        (name, version) = ("Wallet", "1");
         chainId = block.chainid;
         verifyingContract = address(this);
         salt = salt; // `bytes32(0)`.
@@ -166,7 +178,7 @@ contract Wallet {
     function updateValidator(address _validator) public payable {
         if (msg.sender != owner) if (msg.sender != entryPoint) revert Unauthorized();
         validator = _validator;
-        emit ValidatorUpdated(_validator);
+        emit UpdateValidator(_validator);
     }
 }
 
@@ -186,6 +198,7 @@ struct UserOperation {
     bytes signature;
 }
 
+/// @dev Solady (github.com/Vectorized/solady/blob/main/src/utils/SignatureCheckerLib.sol)
 function isValidSignatureNowCalldata(address signer, bytes32 hash, bytes calldata signature)
     view
     returns (bool isValid)

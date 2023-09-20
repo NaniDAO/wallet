@@ -4,15 +4,18 @@ pragma solidity ^0.8.19;
 import {Wallet} from "./Wallet.sol";
 
 contract WalletFactory {
-    event Deployed(Wallet w, address owner, address validator);
+    event Deploy(Wallet indexed wallet, address indexed owner, address indexed validator);
 
-    function deploy(address owner, address validator) public payable returns (Wallet w) {
-        w = new Wallet{value: msg.value, salt: keccak256(abi.encodePacked(owner))}(owner, validator);
-        emit Deployed(w, owner, validator);
+    function deploy(address owner, address validator) public payable returns (Wallet wallet) {
+        emit Deploy(
+            wallet = new Wallet{value: msg.value, salt: keccak256(abi.encodePacked(owner))}(owner, validator),
+            owner,
+            validator
+        );
     }
 
-    function determine(address owner, address validator) public view returns (address w, bool deployed) {
-        w = address(
+    function determine(address owner, address validator) public view returns (address wallet, bool deployed) {
+        wallet = address(
             uint160(
                 uint256(
                     keccak256(
@@ -27,7 +30,7 @@ contract WalletFactory {
             )
         );
         assembly {
-            deployed := extcodesize(w)
+            deployed := extcodesize(wallet)
         }
     }
 }

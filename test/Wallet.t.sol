@@ -6,13 +6,15 @@ import "../src/Wallet.sol";
 import "@forge/Test.sol";
 
 contract WalletTest is Test, SigHelper {
-    Wallet w;
-
     address alice;
     uint256 aliceKey;
 
     address bob;
     uint256 bobKey;
+
+    address immutable validator = makeAddr("validator");
+
+    Wallet w;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -20,14 +22,14 @@ contract WalletTest is Test, SigHelper {
         (alice, aliceKey) = makeAddrAndKey("alice");
         (bob, bobKey) = makeAddrAndKey("bob");
 
-        w = new Wallet(alice, address(0));
+        w = new Wallet(alice, validator);
         payable(address(w)).transfer(100 ether);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testDeploy() public payable {
-        new Wallet(alice, address(0));
+        new Wallet(alice, validator);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -60,7 +62,7 @@ contract WalletTest is Test, SigHelper {
         vm.startPrank(alice);
 
         bytes memory data = abi.encodeWithSignature("foo()");
-        bytes32 digest = buildEIP712Hash(address(w), bob, uint256(0), data, SigHelper.Op.call);
+        bytes32 digest = buildEIP712Hash(address(w), bob, uint256(0), data, Wallet.Op.call);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, digest);
         bytes memory sig = abi.encodePacked(r, s, v);
