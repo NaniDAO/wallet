@@ -13,8 +13,6 @@ contract WalletTest is Test {
 
     address immutable validator = makeAddr("validator");
 
-    address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
-
     Wallet w;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -23,14 +21,14 @@ contract WalletTest is Test {
         (alice, aliceKey) = makeAddrAndKey("alice");
         (bob, bobKey) = makeAddrAndKey("bob");
 
-        w = new Wallet(alice, entryPoint);
+        w = new Wallet(alice);
         payable(address(w)).transfer(100 ether);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testDeploy() public payable {
-        new Wallet(alice, entryPoint);
+        new Wallet(alice);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -41,6 +39,16 @@ contract WalletTest is Test {
 
     function testInitialBalance() public {
         assertEq(address(w).balance, 100 ether);
+    }
+
+    function testOnERC721Received() public {
+        assert(w.onERC721Received(address(0), address(0), 0, "") == 0x150b7a02);
+    }
+
+    function testSupportsInterface() public {
+        assertTrue(w.supportsInterface(0x01ffc9a7));
+        assertTrue(w.supportsInterface(0x150b7a02));
+        assertTrue(w.supportsInterface(0x4e2312e0));
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////

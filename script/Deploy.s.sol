@@ -7,7 +7,7 @@ import {Wallet} from "src/Wallet.sol";
 contract Deploy is Script {
     function run() public payable returns (Wallet w) {
         vm.startBroadcast();
-        w = new Wallet(address(0), address(0));
+        w = new Wallet(address(0));
         vm.stopBroadcast();
     }
 }
