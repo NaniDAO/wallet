@@ -21,7 +21,7 @@ contract Wallet {
     constructor(address _owner, address _validator) payable {
         owner = _owner;
         assembly ("memory-safe") {
-            // Store a non-zero `validator`.
+            // Store if non-zero `_validator`.
             if _validator { sstore(0, _validator) }
         }
     }
@@ -43,7 +43,7 @@ contract Wallet {
                 returndatacopy(0x00, 0x00, returndatasize())
                 // Revert if the `call()` was unsuccessful.
                 if iszero(success) { revert(0x00, returndatasize()) }
-                // Otherwise, return the data from the `call()`.
+                // Otherwise, return the data.
                 return(0x00, returndatasize())
             }
         } else if (op == Op.delegatecall) {
@@ -54,7 +54,7 @@ contract Wallet {
                 returndatacopy(0x00, 0x00, returndatasize())
                 // Revert if the `delegatecall()` was unsuccessful.
                 if iszero(success) { revert(0x00, returndatasize()) }
-                // Otherwise, return the data from the `delegatecall()`.
+                // Otherwise, return the data.
                 return(0x00, returndatasize())
             }
         } else {
@@ -63,9 +63,9 @@ contract Wallet {
                 let created := create(val, add(data, 0x20), mload(data))
                 // Revert if contract creation was unsuccessful.
                 if iszero(created) { revert(0x00, 0x00) }
-                // Otherwise, copy the created contract's address to memory.
+                // Otherwise, copy the address to memory.
                 mstore(0x00, created)
-                // Return the created contract's address.
+                // Return the address.
                 return(0x00, 0x20)
             }
         }
@@ -77,14 +77,14 @@ contract Wallet {
     function onERC721Received(address, address, uint256, bytes calldata) public payable returns (bytes4) {
         assembly ("memory-safe") {
             mstore(0x00, 0x150b7a02) // `ERC721Received`.
-            return(0x00, 0x04) // Return 4 bytes from 0x00.
+            return(0x00, 0x04) // Return 4 bytes.
         }
     }
 
     function onERC1155Received(address, address, uint256, uint256, bytes calldata) public payable returns (bytes4) {
         assembly ("memory-safe") {
             mstore(0x00, 0x4e2312e0) // `ERC1155Received`.
-            return(0x00, 0x04) // Return 4 bytes from 0x00.
+            return(0x00, 0x04) // Return 4 bytes.
         }
     }
 
@@ -95,7 +95,7 @@ contract Wallet {
     {
         assembly ("memory-safe") {
             mstore(0x00, 0xeb9a5567) // `ERC1155BatchReceived`.
-            return(0x00, 0x04) // Return 4 bytes from 0x00.
+            return(0x00, 0x04) // Return 4 bytes.
         }
     }
 
