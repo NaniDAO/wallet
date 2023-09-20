@@ -5,6 +5,9 @@ import "../src/Wallet.sol";
 import "@forge/Test.sol";
 
 contract WalletTest is Test {
+    event Execute(address indexed to, uint256 val, bytes data);
+    event UpdateValidator(address indexed validator);
+
     address alice;
     uint256 aliceKey;
 
@@ -58,21 +61,10 @@ contract WalletTest is Test {
         w.execute(bob, 0, abi.encodeWithSignature("foo()"), Wallet.Op.call);
     }
 
-    event Execute(address indexed to, uint256 val, bytes data);
-
     function testExecuteCallEvent() public payable {
-        // Set the caller for the next transaction to be 'alice'
         vm.prank(alice);
-
-        // Expect the 'Execute' event to be emitted.
-        // This example checks topic0 (always checked), topic1 (true), topic2 (true), but NOT data (false).
         vm.expectEmit(true, true, true, false);
-
-        // Emit the 'Execute' event that you expect to match.
-        // Replace with the actual event if it's differently named.
         emit Execute(bob, 0, abi.encodeWithSignature("foo()"));
-
-        // Perform the call to the 'execute' function.
         w.execute(bob, 0, abi.encodeWithSignature("foo()"), Wallet.Op.call);
     }
 
@@ -99,6 +91,32 @@ contract WalletTest is Test {
         vm.prank(bob);
         w.execute(bob, 1 ether, "", Wallet.Op.call);
     }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function testUpdateValidator() public payable {
+        vm.prank(alice);
+        w.updateValidator(bob);
+    }
+
+    function testUpdateValidatorEvent() public payable {
+        // Set the caller for the next transaction to be 'alice'
+        vm.prank(alice);
+
+        // Expect the 'UpdateValidator' event to be emitted.
+        // This example checks topic0 (always checked), topic1 (true), but NOT topic2 and data (both false).
+        vm.expectEmit(true, true, false, false);
+        emit UpdateValidator(bob);
+        // Perform the call to the 'updateValidator' function.
+        w.updateValidator(bob);
+    }
+
+    /*function testExecuteCallEvent() public payable {
+        vm.prank(alice);
+        vm.expectEmit(true, true, true, false);
+        emit Execute(bob, 0, abi.encodeWithSignature("foo()"));
+        w.execute(bob, 0, abi.encodeWithSignature("foo()"), Wallet.Op.call);
+    }*/
 }
 
 contract Dummy {}

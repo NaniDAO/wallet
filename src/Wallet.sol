@@ -17,10 +17,6 @@ contract Wallet {
     address payable public validator;
     address public immutable owner;
 
-    /// @dev `keccak256(bytes("Execute(address,uint256,bytes)"))`.
-    //uint256 constant _EXECUTE_EVENT_SIGNATURE =
-    //    0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925;
-
     // Constructor...
     constructor(address _owner) payable {
         owner = _owner;
@@ -137,6 +133,23 @@ contract Wallet {
 
         emit UpdateValidator(_validator);
     }
+    /*
+        assembly ("memory-safe") {
+            // Store the new validator in the first storage slot (0x00).
+            sstore(0x00, _validator)
+            // Prepare data for the log
+            mstore(0x00, _validator)
+            // Emit the UpdateValidator event.
+            log1(0x00, 0x20, 0x1e1fec57c7820d1f8245ceb19d2d2fd5d03b4b7b165475077ea520162ce40743)
+        }*/
+
+    // Log Event: `keccak256(bytes("Execute(address,uint256,bytes)"))`.
+    /*    log2(
+                add(dataMem, 0x20),
+                mload(dataMem),
+                0x4a0de09071d37e2800c1dcc9027a0030cd5202f3a5a766952307470adc640c57,
+                to
+            )*/
 }
 
 import "./Meta.sol";
