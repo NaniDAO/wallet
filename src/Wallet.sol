@@ -33,8 +33,13 @@ contract Wallet {
         bytes memory dataMem = data; // Copy `data` from calldata.
 
         assembly ("memory-safe") {
-            // Log Event:
-            log2(add(dataMem, 0x20), mload(dataMem), 0x4a0de09071d37e2800c1dcc9027a0030cd5202f3a5a766952307470adc640c57, to)
+            // Log Event: `keccak256(bytes("Execute(address,uint256,bytes)"))`.
+            log2(
+                add(dataMem, 0x20),
+                mload(dataMem),
+                0x4a0de09071d37e2800c1dcc9027a0030cd5202f3a5a766952307470adc640c57,
+                to
+            )
             // `Op.call`.
             if eq(op, 0) {
                 // Perform a `call()` with the given parameters.
