@@ -14,7 +14,7 @@ contract Wallet {
         create
     }
 
-    address public validator;
+    address payable public validator;
     address public immutable owner;
 
     // Constructor...
@@ -26,9 +26,9 @@ contract Wallet {
     function execute(address to, uint256 val, bytes calldata data, Op op) public payable {
         if (msg.sender != owner) if (msg.sender != entryPoint) revert Unauthorized();
 
-        bytes memory dataMem = data; // Copy `data` from calldata.
-
         emit Execute(to, val, data);
+
+        bytes memory dataMem = data; // Copy `data` from calldata.
 
         assembly ("memory-safe") {
             // `Op.call`.
@@ -108,7 +108,7 @@ contract Wallet {
         if (validator == address(0)) {
             validationData = isValidSignatureNowCalldata(owner, userOpHash, userOp.signature) ? 0 : 1;
         } else {
-            validationData = Wallet(payable(validator)).validateUserOp(userOp, userOpHash, missingAccountFunds);
+            validationData = Wallet(validator).validateUserOp(userOp, userOpHash, missingAccountFunds);
         }
 
         if (missingAccountFunds != 0) {
