@@ -1,32 +1,44 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.19;
 
-import "../src/WalletFactory.sol";
+import {Wallet, WalletFactory} from "../src/WalletFactory.sol";
 import "@forge/Test.sol";
 
 contract WalletFactoryTest is Test {
+    address owner;
+    address validator;
+
     WalletFactory wf;
 
-    address alice;
-
-    address bob;
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function setUp() public payable {
-        alice = makeAddr("alice");
-        bob = makeAddr("bob");
-
+        owner = makeAddr("owner");
+        validator = makeAddr("validator");
         wf = new WalletFactory();
     }
 
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     function testDeploy() public payable {
-        wf.deploy(alice, bob);
-        (address walletAddress, bool deployed) = wf.determine(alice, bob);
-        assertTrue(deployed, "Wallet should be deployed");
+        wf.deploy(owner, validator);
     }
 
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     function testDetermine() public {
-        wf.deploy(alice, bob);
-        (address walletAddress, bool deployed) = wf.determine(alice, bob);
-        assertTrue(deployed, "Wallet should be deployed");
+        (address determined, bool deployed) = wf.determine(owner, validator);
+        assertFalse(deployed, "Should not be deployed yet");
+        Wallet wallet = wf.deploy(owner, validator);
+        assertEq(address(wallet), determined, "Deployed and determined should match");
+        (, deployed) = wf.determine(owner, validator);
+        assertTrue(deployed, "Should be deployed now");
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function testFailDuplicateDeploy() public payable {
+        wf.deploy(owner, validator);
+        wf.deploy(owner, validator);
     }
 }
