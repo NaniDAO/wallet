@@ -29,12 +29,11 @@ contract Wallet {
         bytes memory dataMem = data; // Copy `data` from calldata.
 
         assembly ("memory-safe") {
-            // Emit: `keccak256(bytes("Execute(address,uint256,bytes)"))`.
             log2(
-                add(dataMem, 0x20),
-                mload(dataMem),
-                0x4a0de09071d37e2800c1dcc9027a0030cd5202f3a5a766952307470adc640c57,
-                to
+                add(dataMem, 0x20), // Empty data location.
+                mload(dataMem), // Data size.
+                0x4a0de09071d37e2800c1dcc9027a0030cd5202f3a5a766952307470adc640c57, // `keccak256(bytes("Execute(address,uint256,bytes)"))`.
+                to // Indexed `to`.
             )
             // `Op.call`.
             if eq(op, 0) {
@@ -132,8 +131,8 @@ contract Wallet {
             log2(
                 mload(0x40), // Empty data location.
                 0x0, // Data size.
-                0x1e1fec57c7820d1f8245ceb19d2d2fd5d03b4b7b165475077ea520162ce40743, // Event signature hash.
-                _validator // Indexed _validator.
+                0x1e1fec57c7820d1f8245ceb19d2d2fd5d03b4b7b165475077ea520162ce40743, // `keccak256(bytes("UpdateValidator(address)"))`.
+                _validator // Indexed `_validator`.
             )
         }
     }
