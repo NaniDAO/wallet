@@ -36,6 +36,7 @@ contract Wallet {
         emit Execute(to, val, data);
 
         assembly ("memory-safe") {
+            // if (op == Op.call)...
             if eq(op, 0) {
                 // Perform a `call()` with the given parameters.
                 let success := call(gas(), to, val, add(data, 0x20), mload(data), gas(), 0x00)
@@ -46,6 +47,7 @@ contract Wallet {
                 // Otherwise, return the data.
                 return(0x00, returndatasize())
             }
+            // if (op == Op.delegatecall)...
             if eq(op, 1) {
                 // Perform a `delegatecall()` with the given parameters.
                 let success := delegatecall(gas(), to, add(data, 0x20), mload(data), gas(), 0x00)
@@ -56,16 +58,14 @@ contract Wallet {
                 // Otherwise, return the data.
                 return(0x00, returndatasize())
             }
-            if eq(op, 2) {
-                // `create()` a new contract with the given parameters.
-                let created := create(val, add(data, 0x20), mload(data))
-                // Revert if contract creation was unsuccessful.
-                if iszero(created) { revert(0x00, 0x00) }
-                // Otherwise, copy the address to memory.
-                mstore(0x00, created)
-                // Return the address.
-                return(0x00, 0x20)
-            }
+            // else, Op.create...
+            let created := create(val, add(data, 0x20), mload(data))
+            // Revert if contract creation was unsuccessful.
+            if iszero(created) { revert(0x00, 0x00) }
+            // Otherwise, copy the address to memory.
+            mstore(0x00, created)
+            // Return the address.
+            return(0x00, 0x20)
         }
     }
 
