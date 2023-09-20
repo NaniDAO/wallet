@@ -1,2 +1,3 @@
-Tester:test(string) (runs: 256, μ: 63252, ~: 69216)
-TesterTest:testTest() (gas: 27621)
+WalletTest:testDeploy() (gas: 1109520)
+WalletTest:testExecute() (gas: 18782)
+WalletTest:testExecuteWithSig() (gas: 27744)

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity ^0.8.19;
+// pragma solidity ^0.8.19;
 
-import {Script} from "@forge/Script.sol";
-import {Tester} from "src/Tester.sol";
+// import {Script} from "@forge/Script.sol";
+// import {Wallet} from "src/Wallet.sol";
 
-contract Deploy is Script {
-    function run() public payable returns (Tester tester) {
-        vm.startBroadcast();
-        tester = new Tester();
-        vm.stopBroadcast();
-    }
-}
+// contract Deploy is Script {
+//     function run() public payable returns (Wallet w) {
+//         vm.startBroadcast();
+//         w = new Wallet(address(0, address(0)));
+//         vm.stopBroadcast();
+//     }
+// }
