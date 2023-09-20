@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.19;
 
+import "./Meta.sol";
+
 contract Wallet {
     event Execute(address indexed to, uint256 val, bytes data);
     event UpdateValidator(address indexed validator);
@@ -139,5 +141,3 @@ contract Wallet {
         }
     }
 }
-
-import "./Meta.sol";

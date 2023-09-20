@@ -9,7 +9,7 @@ contract WalletFactory {
     function deploy(address owner) public payable returns (Wallet wallet) {
         emit Deploy(wallet = new Wallet{value: msg.value, salt: keccak256(abi.encodePacked(owner))}(owner), owner);
     }
-    /*
+
     function determine(address owner) public view returns (address wallet, bool deployed) {
         wallet = address(
             uint160(
@@ -28,5 +28,5 @@ contract WalletFactory {
         assembly {
             deployed := extcodesize(wallet)
         }
-    }*/
+    }
 }
