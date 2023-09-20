@@ -77,9 +77,12 @@ contract Wallet {
     }
 
     // eip-165...
-    function supportsInterface(bytes4 interfaceId) public pure returns (bool) {
-        return interfaceId == this.supportsInterface.selector || interfaceId == this.onERC721Received.selector
-            || interfaceId == this.onERC1155Received.selector || interfaceId == this.onERC1155BatchReceived.selector;
+    function supportsInterface(bytes4 interfaceId) public pure returns (bool supported) {
+        //...ERC721TokenReceiver/ERC1155TokenReceiver
+        assembly ("memory-safe") {
+            let s := shr(224, interfaceId)
+            supported := or(eq(s, 0x01ffc9a7), or(eq(s, 0x150b7a02), eq(s, 0x4e2312e0)))
+        }
     }
 
     // eip-1271...
