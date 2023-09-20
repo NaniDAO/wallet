@@ -20,15 +20,15 @@ contract Wallet {
     // Constructor...
     constructor(address _owner, address _validator) payable {
         owner = _owner;
+        // Store `_validator` if non-zero.
         assembly ("memory-safe") {
-            // Store if non-zero `_validator`.
             if _validator { sstore(0, _validator) }
         }
     }
 
     // Execute Op...
     function execute(address to, uint256 val, bytes calldata data, Op op) public payable {
-        bytes memory dataMem = data;
+        bytes memory dataMem = data; // Copy `data` from calldata.
 
         emit Execute(to, val, data);
 
@@ -137,9 +137,11 @@ contract Wallet {
     // Validator Setting...
     function updateValidator(address _validator) public payable {
         if (msg.sender != owner) if (msg.sender != entryPoint) revert Unauthorized();
+
         assembly ("memory-safe") {
             sstore(0, _validator)
         }
+
         emit UpdateValidator(_validator);
     }
 }
