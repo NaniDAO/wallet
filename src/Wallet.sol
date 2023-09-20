@@ -26,9 +26,12 @@ contract Wallet {
     }
 
     // Execute Op...
-    function execute(address to, uint256 val, bytes memory data, Op op) public payable {
+    function execute(address to, uint256 val, bytes calldata data, Op op) public payable {
         if (msg.sender != owner) if (msg.sender != entryPoint) revert Unauthorized();
+        _execute(to, val, data, op);
+    }
 
+    function _execute(address to, uint256 val, bytes memory data, Op op) internal {
         emit Execute(to, val, data);
         if (op == Op.call) {
             assembly ("memory-safe") {
