@@ -5,40 +5,36 @@ import {Wallet, WalletFactory} from "../src/WalletFactory.sol";
 import "@forge/Test.sol";
 
 contract WalletFactoryTest is Test {
-    address owner;
-    address validator;
+    address immutable owner = address(0xa);
+    address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
 
-    WalletFactory wf;
+    WalletFactory immutable wf = new WalletFactory();
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function setUp() public payable {
-        owner = makeAddr("owner");
-        validator = makeAddr("validator");
-        wf = new WalletFactory();
-    }
+    function setUp() public payable {}
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testDeploy() public payable {
-        wf.deploy(owner, validator);
+        wf.deploy(owner, entryPoint);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testDetermine() public {
-        (address determined, bool deployed) = wf.determine(owner, validator);
+        (address determined, bool deployed) = wf.determine(owner, entryPoint);
         assertFalse(deployed, "Should not be deployed yet");
-        Wallet wallet = wf.deploy(owner, validator);
+        Wallet wallet = wf.deploy(owner, entryPoint);
         assertEq(address(wallet), determined, "Deployed and determined should match");
-        (, deployed) = wf.determine(owner, validator);
+        (, deployed) = wf.determine(owner, entryPoint);
         assertTrue(deployed, "Should be deployed now");
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testFailDuplicateDeploy() public payable {
-        wf.deploy(owner, validator);
-        wf.deploy(owner, validator);
+        wf.deploy(owner, entryPoint);
+        wf.deploy(owner, entryPoint);
     }
 }

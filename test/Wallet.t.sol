@@ -13,6 +13,8 @@ contract WalletTest is Test {
 
     address immutable validator = makeAddr("validator");
 
+    address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+
     Wallet w;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -21,23 +23,24 @@ contract WalletTest is Test {
         (alice, aliceKey) = makeAddrAndKey("alice");
         (bob, bobKey) = makeAddrAndKey("bob");
 
-        w = new Wallet(alice, validator);
+        w = new Wallet(alice, entryPoint);
         payable(address(w)).transfer(100 ether);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testDeploy() public payable {
-        new Wallet(alice, address(0));
+        new Wallet(alice, entryPoint);
     }
 
-    function testDeployWithValidator() public payable {
-        new Wallet(alice, validator);
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function testInitialOwner() public {
+        assertEq(w.owner(), alice);
     }
 
-    function testValidatorIsSet() public payable {
-        Wallet setW = new Wallet(alice, validator);
-        assertEq(setW.validator(), validator);
+    function testInitialBalance() public {
+        assertEq(address(w).balance, 100 ether);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -61,6 +64,13 @@ contract WalletTest is Test {
 
     function testExecuteETHTransfer() public payable {
         vm.prank(alice);
+        w.execute(bob, 1 ether, "", Wallet.Op.call);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function testFailNonOwnerExecute() public {
+        vm.prank(bob);
         w.execute(bob, 1 ether, "", Wallet.Op.call);
     }
 }

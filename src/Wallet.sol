@@ -15,25 +15,25 @@ contract Wallet {
     }
 
     address public validator;
+    address immutable entryPoint;
     address public immutable owner;
 
     // Constructor...
-    constructor(address _owner, address _validator) payable {
+    constructor(address _owner, address _entryPoint) payable {
         owner = _owner;
-        // Store `_validator` if non-zero.
-        assembly ("memory-safe") {
-            if _validator { sstore(0, _validator) }
-        }
+        entryPoint = _entryPoint;
     }
 
     // Execute Op...
     function execute(address to, uint256 val, bytes calldata data, Op op) public payable {
+        if (msg.sender != owner) if (msg.sender != entryPoint) revert Unauthorized();
+
         bytes memory dataMem = data; // Copy `data` from calldata.
 
         emit Execute(to, val, data);
 
         assembly ("memory-safe") {
-            // Op.call
+            // `Op.call`.
             if eq(op, 0) {
                 // Perform a `call()` with the given parameters.
                 let success := call(gas(), to, val, add(dataMem, 0x20), mload(dataMem), gas(), 0x00)
@@ -44,7 +44,7 @@ contract Wallet {
                 // Otherwise, return the data.
                 return(0x00, returndatasize())
             }
-            // Op.delegatecall
+            // `Op.delegatecall`.
             if eq(op, 1) {
                 // Perform a `delegatecall()` with the given parameters.
                 let success := delegatecall(gas(), to, add(dataMem, 0x20), mload(dataMem), gas(), 0x00)
@@ -55,7 +55,7 @@ contract Wallet {
                 // Otherwise, return the data.
                 return(0x00, returndatasize())
             }
-            // Op.create
+            // `Op.create`.
             let created := create(val, add(dataMem, 0x20), mload(dataMem))
             // Revert if contract creation was unsuccessful.
             if iszero(created) { revert(0x00, 0x00) }
@@ -145,8 +145,6 @@ contract Wallet {
         emit UpdateValidator(_validator);
     }
 }
-
-address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
 
 struct UserOperation {
     address sender;

@@ -6,15 +6,16 @@ import {Wallet} from "./Wallet.sol";
 contract WalletFactory {
     event Deploy(Wallet indexed wallet, address owner, address validator);
 
-    function deploy(address owner, address validator) public payable returns (Wallet wallet) {
+    function deploy(address owner, address entryPoint) public payable returns (Wallet wallet) {
         emit Deploy(
-            wallet = new Wallet{value: msg.value, salt: keccak256(abi.encodePacked(owner))}(owner, validator),
+            wallet =
+                new Wallet{value: msg.value, salt: keccak256(abi.encodePacked(owner, entryPoint))}(owner, entryPoint),
             owner,
-            validator
+            entryPoint
         );
     }
 
-    function determine(address owner, address validator) public view returns (address wallet, bool deployed) {
+    function determine(address owner, address entryPoint) public view returns (address wallet, bool deployed) {
         wallet = address(
             uint160(
                 uint256(
@@ -22,8 +23,8 @@ contract WalletFactory {
                         abi.encodePacked(
                             bytes1(0xff),
                             address(this),
-                            keccak256(abi.encodePacked(owner)),
-                            keccak256(abi.encodePacked(type(Wallet).creationCode, abi.encode(owner, validator)))
+                            keccak256(abi.encodePacked(owner, entryPoint)),
+                            keccak256(abi.encodePacked(type(Wallet).creationCode, abi.encode(owner, entryPoint)))
                         )
                     )
                 )
