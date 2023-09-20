@@ -105,13 +105,6 @@ contract Wallet {
     {
         if (msg.sender != entryPoint) revert Unauthorized();
 
-        // (solady/blob/main/src/utils/ECDSA.sol)
-        assembly ("memory-safe") {
-            mstore(0x20, userOpHash) // Store into scratch space for keccak256.
-            mstore(0x00, "\x00\x00\x00\x00\x19Ethereum Signed Message:\n32") // 28 bytes.
-            userOpHash := keccak256(0x04, 0x3c) // `32 * 2 - (32 - 28) = 60 = 0x3c`.
-        }
-
         validator == address(0)
             ? validationData = isValidSignatureNowCalldata(owner, userOpHash, userOp.signature) ? 0 : 1
             : validationData = Wallet(payable(validator)).validateUserOp(userOp, userOpHash, missingAccountFunds);
