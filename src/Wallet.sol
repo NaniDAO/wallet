@@ -68,11 +68,12 @@ contract Wallet {
     receive() external payable {}
 
     function onERC721Received(address, address, uint256, bytes calldata) public payable returns (bytes4) {
-        assembly {
+        return this.onERC721Received.selector;
+        /*assembly {
             // Set the return data to be 0x150b7a02
             mstore(0x00, 0x150b7a0200000000000000000000000000000000000000000000000000000000)
             return(0x00, 0x20)
-        }
+        }*/
     }
 
     function onERC1155Received(address, address, uint256, uint256, bytes calldata) public payable returns (bytes4) {
