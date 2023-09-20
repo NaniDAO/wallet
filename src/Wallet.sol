@@ -26,9 +26,13 @@ contract Wallet {
     function execute(address to, uint256 val, bytes calldata data, Op op) public payable {
         if (msg.sender != owner) if (msg.sender != entryPoint) revert Unauthorized();
 
-        emit Execute(to, val, data);
-
         bytes memory dataMem = data; // Copy `data` from calldata.
+
+        assembly {
+            let eventSignature := 0x711d6896
+            let dataLength := mload(dataMem)
+            log2(add(dataMem, 0x20), dataLength, eventSignature, to)
+        }
 
         assembly ("memory-safe") {
             // `Op.call`.
