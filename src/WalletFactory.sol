@@ -4,7 +4,7 @@ pragma solidity ^0.8.19;
 import {Wallet} from "./Wallet.sol";
 
 contract WalletFactory {
-    event Deploy(Wallet indexed wallet, address owner, address validator);
+    event Deploy(Wallet indexed wallet, address owner, address entryPoint);
 
     function deploy(address owner, address entryPoint) public payable returns (Wallet wallet) {
         emit Deploy(
