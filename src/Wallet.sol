@@ -143,8 +143,7 @@ contract Wallet {
     function updateValidator(address _validator) public payable {
         if (msg.sender != owner) if (msg.sender != entryPoint) revert Unauthorized();
         assembly ("memory-safe") {
-            // Store a non-zero `validator`.
-            if _validator { sstore(0, _validator) }
+            sstore(0, _validator)
         }
         emit UpdateValidator(_validator);
     }
