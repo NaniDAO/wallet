@@ -14,6 +14,7 @@ contract Wallet {
         create
     }
 
+    uint96 public nonce;
     address public validator;
     address public immutable owner;
     bytes32 immutable domainSeparator = keccak256(
@@ -25,8 +26,6 @@ contract Wallet {
             address(this)
         )
     );
-
-    uint256 public nonce;
 
     // Constructor...
     constructor(address _owner, address _validator) payable {
