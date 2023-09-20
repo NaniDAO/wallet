@@ -17,6 +17,10 @@ contract Wallet {
     address payable public validator;
     address public immutable owner;
 
+    /// @dev `keccak256(bytes("Execute(address,uint256,bytes)"))`.
+    //uint256 constant _EXECUTE_EVENT_SIGNATURE =
+    //    0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925;
+
     // Constructor...
     constructor(address _owner) payable {
         owner = _owner;
@@ -29,7 +33,8 @@ contract Wallet {
         bytes memory dataMem = data; // Copy `data` from calldata.
 
         assembly ("memory-safe") {
-            log2(add(dataMem, 0x20), mload(dataMem), 0x711d6896, to)
+            // Log Event:
+            log2(add(dataMem, 0x20), mload(dataMem), 0x4a0de09071d37e2800c1dcc9027a0030cd5202f3a5a766952307470adc640c57, to)
             // `Op.call`.
             if eq(op, 0) {
                 // Perform a `call()` with the given parameters.

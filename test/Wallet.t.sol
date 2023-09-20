@@ -58,6 +58,24 @@ contract WalletTest is Test {
         w.execute(bob, 0, abi.encodeWithSignature("foo()"), Wallet.Op.call);
     }
 
+    event Execute(address indexed to, uint256 val, bytes data);
+
+    function testExecuteCallEvent() public payable {
+        // Set the caller for the next transaction to be 'alice'
+        vm.prank(alice);
+
+        // Expect the 'Execute' event to be emitted.
+        // This example checks topic0 (always checked), topic1 (true), topic2 (true), but NOT data (false).
+        vm.expectEmit(true, true, true, false);
+
+        // Emit the 'Execute' event that you expect to match.
+        // Replace with the actual event if it's differently named.
+        emit Execute(bob, 0, abi.encodeWithSignature("foo()"));
+
+        // Perform the call to the 'execute' function.
+        w.execute(bob, 0, abi.encodeWithSignature("foo()"), Wallet.Op.call);
+    }
+
     function testExecuteDelegatecall() public payable {
         vm.prank(alice);
         w.execute(bob, 0, abi.encodeWithSignature("foo()"), Wallet.Op.delegatecall);
