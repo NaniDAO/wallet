@@ -28,18 +28,15 @@ contract Wallet {
 
     // Execute Op...
     function execute(address to, uint256 val, bytes calldata data, Op op) public payable {
-        if (msg.sender != owner) if (msg.sender != entryPoint) revert Unauthorized();
-        _execute(to, val, data, op);
-    }
+        bytes memory dataMem = data;
 
-    function _execute(address to, uint256 val, bytes memory data, Op op) internal {
         emit Execute(to, val, data);
 
         assembly ("memory-safe") {
-            // if (op == Op.call)...
+            // Op.call
             if eq(op, 0) {
                 // Perform a `call()` with the given parameters.
-                let success := call(gas(), to, val, add(data, 0x20), mload(data), gas(), 0x00)
+                let success := call(gas(), to, val, add(dataMem, 0x20), mload(dataMem), gas(), 0x00)
                 // Copy the returned data to memory.
                 returndatacopy(0x00, 0x00, returndatasize())
                 // Revert if the `call()` was unsuccessful.
@@ -47,10 +44,10 @@ contract Wallet {
                 // Otherwise, return the data.
                 return(0x00, returndatasize())
             }
-            // if (op == Op.delegatecall)...
+            // Op.delegatecall
             if eq(op, 1) {
                 // Perform a `delegatecall()` with the given parameters.
-                let success := delegatecall(gas(), to, add(data, 0x20), mload(data), gas(), 0x00)
+                let success := delegatecall(gas(), to, add(dataMem, 0x20), mload(dataMem), gas(), 0x00)
                 // Copy the returned data to memory.
                 returndatacopy(0x00, 0x00, returndatasize())
                 // Revert if the `delegatecall()` was unsuccessful.
@@ -58,8 +55,8 @@ contract Wallet {
                 // Otherwise, return the data.
                 return(0x00, returndatasize())
             }
-            // else, Op.create...
-            let created := create(val, add(data, 0x20), mload(data))
+            // Op.create
+            let created := create(val, add(dataMem, 0x20), mload(dataMem))
             // Revert if contract creation was unsuccessful.
             if iszero(created) { revert(0x00, 0x00) }
             // Otherwise, copy the address to memory.
