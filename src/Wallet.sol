@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 contract Wallet {
-    event Execute(address indexed to, uint256 val, bytes data, uint256 indexed nonce);
+    event Execute(address indexed to, uint256 val, bytes data);
     event UpdateValidator(address indexed validator);
 
     error InvalidSignature();
@@ -14,18 +14,8 @@ contract Wallet {
         create
     }
 
-    uint96 public nonce;
     address public validator;
     address public immutable owner;
-    bytes32 immutable domainSeparator = keccak256(
-        abi.encode(
-            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-            keccak256(bytes("Wallet")),
-            keccak256("1"),
-            block.chainid,
-            address(this)
-        )
-    );
 
     // Constructor...
     constructor(address _owner, address _validator) payable {
@@ -38,39 +28,11 @@ contract Wallet {
     // Execute Op...
     function execute(address to, uint256 val, bytes calldata data, Op op) public payable {
         if (msg.sender != owner) if (msg.sender != entryPoint) revert Unauthorized();
-        emit Execute(to, val, data, type(uint256).max);
-        _execute(to, val, data, op);
-    }
-
-    function execute(address to, uint256 val, bytes calldata data, Op op, bytes calldata sig) public payable {
-        uint256 txNonce;
-        unchecked {
-            emit Execute(to, val, data, txNonce = nonce++);
-        }
-
-        bytes32 hash = keccak256(
-            abi.encodePacked(
-                "\x19\x01",
-                domainSeparator,
-                keccak256(
-                    abi.encode(
-                        keccak256("Execute(address to,uint256 val,bytes data,uint8 op,uint256 nonce)"),
-                        to,
-                        val,
-                        keccak256(data),
-                        op,
-                        txNonce
-                    )
-                )
-            )
-        );
-
-        if (!isValidSignatureNowCalldata(owner, hash, sig)) revert InvalidSignature();
-
         _execute(to, val, data, op);
     }
 
     function _execute(address to, uint256 val, bytes memory data, Op op) internal {
+        emit Execute(to, val, data);
         if (op == Op.call) {
             assembly ("memory-safe") {
                 let success := call(gas(), to, val, add(data, 0x20), mload(data), gas(), 0x00)
@@ -149,28 +111,6 @@ contract Wallet {
                 pop(call(gas(), caller(), missingAccountFunds, 0x00, 0x00, 0x00, 0x00))
             }
         }
-    }
-
-    // eip-5267...
-    function eip712Domain()
-        public
-        view
-        returns (
-            bytes1 fields,
-            string memory name,
-            string memory version,
-            uint256 chainId,
-            address verifyingContract,
-            bytes32 salt,
-            uint256[] memory extensions
-        )
-    {
-        fields = hex"0f"; // `0b01111`.
-        (name, version) = ("Wallet", "1");
-        chainId = block.chainid;
-        verifyingContract = address(this);
-        salt = salt; // `bytes32(0)`.
-        extensions = extensions; // `new uint256[](0)`.
     }
 
     // Validator Setting...

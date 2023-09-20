@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.19;
 
-import "./utils/SigHelper.sol";
 import "../src/Wallet.sol";
 import "@forge/Test.sol";
 
-contract WalletTest is Test, SigHelper {
+contract WalletTest is Test {
     address alice;
     uint256 aliceKey;
 
@@ -29,6 +28,10 @@ contract WalletTest is Test, SigHelper {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testDeploy() public payable {
+        new Wallet(alice, address(0));
+    }
+
+    function testDeployWithValidator() public payable {
         new Wallet(alice, validator);
     }
 
@@ -46,7 +49,7 @@ contract WalletTest is Test, SigHelper {
 
     function testExecuteCreate() public payable {
         vm.prank(alice);
-        w.execute(address(0), 0, type(SigHelper).creationCode, Wallet.Op.create);
+        w.execute(address(0), 0, type(Dummy).creationCode, Wallet.Op.create);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -55,20 +58,6 @@ contract WalletTest is Test, SigHelper {
         vm.prank(alice);
         w.execute(bob, 1 ether, "", Wallet.Op.call);
     }
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    function testExecuteWithSig() public payable {
-        vm.startPrank(alice);
-
-        bytes memory data = abi.encodeWithSignature("foo()");
-        bytes32 digest = buildEIP712Hash(address(w), bob, uint256(0), data, Wallet.Op.call);
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, digest);
-        bytes memory sig = abi.encodePacked(r, s, v);
-
-        w.execute(bob, 0, data, Wallet.Op.call, sig);
-
-        vm.stopPrank();
-    }
 }
+
+contract Dummy {}
