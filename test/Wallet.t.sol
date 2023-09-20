@@ -35,6 +35,11 @@ contract WalletTest is Test {
         new Wallet(alice, validator);
     }
 
+    function testValidatorIsSet() public payable {
+        Wallet setW = new Wallet(alice, validator);
+        assertEq(setW.validator(), validator);
+    }
+
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testExecuteCall() public payable {

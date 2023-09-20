@@ -20,8 +20,9 @@ contract Wallet {
     // Constructor...
     constructor(address _owner, address _validator) payable {
         owner = _owner;
-        if (_validator != address(0)) {
-            validator = _validator;
+        assembly ("memory-safe") {
+            // Store a non-zero `validator`.
+            if _validator { sstore(0, _validator) }
         }
     }
 
@@ -101,7 +102,7 @@ contract Wallet {
     // eip-165...
     function supportsInterface(bytes4 interfaceId) public pure returns (bool supported) {
         assembly ("memory-safe") {
-            let s := shr(224, interfaceId) //...ERC721TokenReceiver/ERC1155TokenReceiver
+            let s := shr(224, interfaceId) //...ERC721TokenReceiver/ERC1155TokenReceiver.
             supported := or(eq(s, 0x01ffc9a7), or(eq(s, 0x150b7a02), eq(s, 0x4e2312e0)))
         }
     }
@@ -141,7 +142,10 @@ contract Wallet {
     // Validator Setting...
     function updateValidator(address _validator) public payable {
         if (msg.sender != owner) if (msg.sender != entryPoint) revert Unauthorized();
-        validator = _validator;
+        assembly ("memory-safe") {
+            // Store a non-zero `validator`.
+            if _validator { sstore(0, _validator) }
+        }
         emit UpdateValidator(_validator);
     }
 }
