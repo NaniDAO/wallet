@@ -28,9 +28,8 @@ contract Wallet {
     function execute(address to, uint256 val, bytes calldata data, Op op) public payable {
         if (msg.sender != owner) if (msg.sender != entryPoint) revert Unauthorized();
 
-        bytes memory dataMem = data; // Copy `data` from calldata.
-
-        assembly ("memory-safe") {
+        assembly {
+            let dataMem := mload(data.offset) // Load `data` from calldata.
             // Event:
             log2(
                 add(dataMem, 0x20), // Empty data location.
@@ -39,7 +38,7 @@ contract Wallet {
                 to // Indexed `to`.
             )
             // `Op.call`.
-            if eq(op, 0) {
+            if iszero(op) {
                 // Perform a `call()` with the given parameters.
                 let success := call(gas(), to, val, add(dataMem, 0x20), mload(dataMem), gas(), 0x00)
                 // Copy the returned data to memory.
