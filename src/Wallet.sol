@@ -33,25 +33,38 @@ contract Wallet {
 
     function _execute(address to, uint256 val, bytes memory data, Op op) internal {
         emit Execute(to, val, data);
+
         if (op == Op.call) {
             assembly ("memory-safe") {
+                // Perform a `call()` with the given parameters.
                 let success := call(gas(), to, val, add(data, 0x20), mload(data), gas(), 0x00)
+                // Copy the returned data to memory.
                 returndatacopy(0x00, 0x00, returndatasize())
+                // Revert if the `call()` was unsuccessful.
                 if iszero(success) { revert(0x00, returndatasize()) }
+                // Otherwise, return the data from the `call()`.
                 return(0x00, returndatasize())
             }
         } else if (op == Op.delegatecall) {
             assembly ("memory-safe") {
+                // Perform a `delegatecall()` with the given parameters.
                 let success := delegatecall(gas(), to, add(data, 0x20), mload(data), gas(), 0x00)
+                // Copy the returned data to memory.
                 returndatacopy(0x00, 0x00, returndatasize())
+                // Revert if the `delegatecall()` was unsuccessful.
                 if iszero(success) { revert(0x00, returndatasize()) }
+                // Otherwise, return the data from the `delegatecall()`.
                 return(0x00, returndatasize())
             }
         } else {
             assembly ("memory-safe") {
+                // `create()` a new contract with the given parameters.
                 let created := create(val, add(data, 0x20), mload(data))
+                // Revert if contract creation was unsuccessful.
                 if iszero(created) { revert(0x00, 0x00) }
+                // Otherwise, copy the created contract's address to memory.
                 mstore(0x00, created)
+                // Return the created contract's address.
                 return(0x00, 0x20)
             }
         }
@@ -61,11 +74,17 @@ contract Wallet {
     receive() external payable {}
 
     function onERC721Received(address, address, uint256, bytes calldata) public payable returns (bytes4) {
-        return this.onERC721Received.selector;
+        assembly ("memory-safe") {
+            mstore(0x00, 0x150b7a02) // `ERC721Received`.
+            return(0x00, 0x04) // Return 4 bytes from 0x00.
+        }
     }
 
     function onERC1155Received(address, address, uint256, uint256, bytes calldata) public payable returns (bytes4) {
-        return this.onERC1155Received.selector;
+        assembly ("memory-safe") {
+            mstore(0x00, 0x4e2312e0) // `ERC1155Received`.
+            return(0x00, 0x04) // Return 4 bytes from 0x00.
+        }
     }
 
     function onERC1155BatchReceived(address, address, uint256[] calldata, uint256[] calldata, bytes calldata)
@@ -73,14 +92,16 @@ contract Wallet {
         payable
         returns (bytes4)
     {
-        return this.onERC1155BatchReceived.selector;
+        assembly ("memory-safe") {
+            mstore(0x00, 0xeb9a5567) // `ERC1155BatchReceived`.
+            return(0x00, 0x04) // Return 4 bytes from 0x00.
+        }
     }
 
     // eip-165...
     function supportsInterface(bytes4 interfaceId) public pure returns (bool supported) {
-        //...ERC721TokenReceiver/ERC1155TokenReceiver
         assembly ("memory-safe") {
-            let s := shr(224, interfaceId)
+            let s := shr(224, interfaceId) //...ERC721TokenReceiver/ERC1155TokenReceiver
             supported := or(eq(s, 0x01ffc9a7), or(eq(s, 0x150b7a02), eq(s, 0x4e2312e0)))
         }
     }
@@ -99,6 +120,7 @@ contract Wallet {
     {
         if (msg.sender != entryPoint) revert Unauthorized();
 
+        // (solady/blob/main/src/utils/ECDSA.sol)
         assembly ("memory-safe") {
             mstore(0x20, userOpHash) // Store into scratch space for keccak256.
             mstore(0x00, "\x00\x00\x00\x00\x19Ethereum Signed Message:\n32") // 28 bytes.
@@ -140,7 +162,7 @@ struct UserOperation {
     bytes signature;
 }
 
-/// @dev Solady (github.com/Vectorized/solady/blob/main/src/utils/SignatureCheckerLib.sol)
+// (solady/blob/main/src/utils/SignatureCheckerLib.sol)
 function isValidSignatureNowCalldata(address signer, bytes32 hash, bytes calldata signature)
     view
     returns (bool isValid)
