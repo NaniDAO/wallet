@@ -1,4 +1,4 @@
-WalletFactoryTest:testDeploy() (gas: 760720)
+WalletFactoryTest:testDeploy() (gas: 760721)
 WalletFactoryTest:testFailDuplicateDeploy() (gas: 8937393460516753112)
 WalletTest:testDeploy() (gas: 757411)
 WalletTest:testExecuteCall() (gas: 17338)
