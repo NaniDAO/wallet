@@ -28,13 +28,8 @@ contract Wallet {
 
         bytes memory dataMem = data; // Copy `data` from calldata.
 
-        assembly {
-            let eventSignature := 0x711d6896
-            let dataLength := mload(dataMem)
-            log2(add(dataMem, 0x20), dataLength, eventSignature, to)
-        }
-
         assembly ("memory-safe") {
+            log2(add(dataMem, 0x20), mload(dataMem), 0x711d6896, to)
             // `Op.call`.
             if eq(op, 0) {
                 // Perform a `call()` with the given parameters.
