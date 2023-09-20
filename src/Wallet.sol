@@ -29,6 +29,7 @@ contract Wallet {
         bytes memory dataMem = data; // Copy `data` from calldata.
 
         assembly ("memory-safe") {
+            // Event:
             log2(
                 add(dataMem, 0x20), // Empty data location.
                 mload(dataMem), // Data size.
@@ -127,7 +128,8 @@ contract Wallet {
         if (msg.sender != owner) if (msg.sender != entryPoint) revert Unauthorized();
 
         assembly ("memory-safe") {
-            sstore(0, _validator)
+            sstore(0, _validator) // Store _`validator` in slot 0.
+            // Event:
             log2(
                 mload(0x40), // Empty data location.
                 0x0, // Data size.
