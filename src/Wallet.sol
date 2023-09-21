@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 contract Wallet {
     address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
-    address public immutable owner;
+    address immutable owner;
 
     constructor(address _owner) payable {
         owner = _owner;
@@ -28,8 +28,8 @@ contract Wallet {
     }
 
     // eip-1271...
-    function isValidSignature(bytes32 hash, bytes calldata sig) public view returns (bytes4) {
-        if (isValidSignatureNowCalldata(owner, hash, sig)) return this.isValidSignature.selector;
+    function isValidSignature(bytes32 hash, bytes calldata sig) public view returns (bytes4 y) {
+        if (isValidSignatureNowCalldata(owner, hash, sig)) y = this.isValidSignature.selector;
     }
 
     // eip-4337...
