@@ -2,12 +2,11 @@
 pragma solidity ^0.8.19;
 
 contract Wallet {
-    address public immutable owner;
+    address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+    address public immutable owner = address(bytes20(keccak256(abi.encodePacked(address(this), msg.data))));
 
     // Constructor...
-    constructor(address _owner) payable {
-        owner = _owner;
-    }
+    constructor() payable {}
 
     // Execute Op...
     function execute(address to, uint256 val, bytes calldata data, bool del) public payable {
@@ -60,6 +59,20 @@ contract Wallet {
     }
 
     // eip-4337...
+    struct UserOperation {
+        address sender;
+        uint256 nonce;
+        bytes initCode;
+        bytes callData;
+        uint256 callGasLimit;
+        uint256 verificationGasLimit;
+        uint256 preVerificationGas;
+        uint256 maxFeePerGas;
+        uint256 maxPriorityFeePerGas;
+        bytes paymasterAndData;
+        bytes signature;
+    }
+
     function validateUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
         public
         payable
@@ -74,22 +87,6 @@ contract Wallet {
         }
     }
 }
-
-struct UserOperation {
-    address sender;
-    uint256 nonce;
-    bytes initCode;
-    bytes callData;
-    uint256 callGasLimit;
-    uint256 verificationGasLimit;
-    uint256 preVerificationGas;
-    uint256 maxFeePerGas;
-    uint256 maxPriorityFeePerGas;
-    bytes paymasterAndData;
-    bytes signature;
-}
-
-address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
 
 // (solady/blob/main/src/utils/SignatureCheckerLib.sol)
 function isValidSignatureNowCalldata(address signer, bytes32 hash, bytes calldata signature)
