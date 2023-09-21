@@ -28,8 +28,8 @@ contract Wallet {
     }
 
     // eip-1271...
-    function isValidSignature(bytes32 hash, bytes calldata sig) public view returns (uint32) {
-        return isValidSignatureNowCalldata(owner, hash, sig) ? 0x1626ba7e : 0xffffffff;
+    function isValidSignature(bytes32 hash, bytes calldata sig) public view returns (bytes4) {
+        if (isValidSignatureNowCalldata(owner, hash, sig)) return this.isValidSignature.selector;
     }
 
     // eip-4337...
