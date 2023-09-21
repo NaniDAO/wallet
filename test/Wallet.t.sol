@@ -3,10 +3,10 @@ pragma solidity ^0.8.19;
 
 import "../src/Wallet.sol";
 import "@forge/Test.sol";
+import {MockERC721} from "@solady/test/utils/mocks/MockERC721.sol";
 
 contract WalletTest is Test {
     event Execute(address indexed to, uint256 val, bytes data);
-    event UpdateValidator(address indexed validator);
 
     address alice;
     uint256 aliceKey;
@@ -14,11 +14,10 @@ contract WalletTest is Test {
     address bob;
     uint256 bobKey;
 
-    address immutable validator = makeAddr("validator");
-
     address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
 
     Wallet w;
+    MockERC721 erc721;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -28,15 +27,17 @@ contract WalletTest is Test {
 
         w = new Wallet();
         payable(address(w)).transfer(100 ether);
+
+        erc721 = new MockERC721();
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function testInitialOwner() public {
+    function testInitialOwner() public payable {
         //assertEq(w.owner(), alice);
     }
 
-    function testInitialBalance() public {
+    function testInitialBalance() public payable {
         assertEq(address(w).balance, 100 ether);
     }
 
@@ -61,9 +62,17 @@ contract WalletTest is Test {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function testFailNonOwnerExecute() public {
+    function testFailNonOwnerExecute() public payable {
         vm.prank(bob);
         w.execute(bob, 1 ether, "", false);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function testOnERC721Received() public payable {
+        erc721.mint(alice, 1);
+        vm.prank(alice);
+        //erc721.safeTransferFrom(alice, 1, w);
     }
 }
 
