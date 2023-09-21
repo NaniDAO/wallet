@@ -14,7 +14,8 @@ import {MockERC1155} from "@solady/test/utils/mocks/MockERC1155.sol";
 contract WalletTest is Test {
     event Execute(address indexed to, uint256 val, bytes data);
 
-    address alice;
+    address aliceAddr;
+    bytes32 alice;
     uint256 aliceKey;
 
     address bob;
@@ -29,11 +30,11 @@ contract WalletTest is Test {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function setUp() public payable {
-        (alice, aliceKey) = makeAddrAndKey("alice");
+        (aliceAddr, aliceKey) = makeAddrAndKey("alice");
         (bob, bobKey) = makeAddrAndKey("bob");
 
         WalletFactory f = new WalletFactory();
-        w = f.deploy(alice);
+        w = f.deploy(bytes32(uint256(uint160(aliceAddr))));
 
         payable(address(w)).transfer(100 ether);
 
@@ -91,26 +92,24 @@ contract WalletTest is Test {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testOnERC721Received() public payable {
-        erc721.mint(alice, 1);
-        vm.prank(alice);
-        erc721.safeTransferFrom(alice, address(w), 1);
+        erc721.mint(aliceAddr, 1);
+        vm.prank(aliceAddr);
+        erc721.safeTransferFrom(aliceAddr, address(w), 1);
     }
 
     function testOnERC1155Received() public payable {
-        erc1155.mint(alice, 1, 1, "");
-        vm.prank(alice);
-        erc1155.safeTransferFrom(alice, address(w), 1, 1, "");
+        erc1155.mint(aliceAddr, 1, 1, "");
+        vm.prank(aliceAddr);
+        erc1155.safeTransferFrom(aliceAddr, address(w), 1, 1, "");
     }
 
     function testOnERC1155BatchReceived() public payable {
-        erc1155.mint(alice, 1, 1, "");
-        vm.prank(alice);
+        erc1155.mint(aliceAddr, 1, 1, "");
+        vm.prank(aliceAddr);
         uint256[] memory ids = new uint256[](1);
         ids[0] = 1;
         uint256[] memory amts = new uint256[](1);
         amts[0] = 1;
-        erc1155.safeBatchTransferFrom(alice, address(w), ids, amts, "");
+        erc1155.safeBatchTransferFrom(aliceAddr, address(w), ids, amts, "");
     }
 }
-
-contract Dummy {}

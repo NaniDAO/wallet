@@ -6,7 +6,7 @@ import {Wallet} from "./Wallet.sol";
 contract WalletFactory {
     event Deploy(Wallet indexed wallet);
 
-    function deploy(address owner) public payable returns (Wallet wallet) {
-        emit Deploy(wallet = new Wallet{value: msg.value, salt: bytes32(abi.encodePacked(owner))}(owner));
+    function deploy(bytes32 owner) public payable returns (Wallet wallet) {
+        emit Deploy(wallet = new Wallet{value: msg.value, salt: owner}(owner));
     }
 }

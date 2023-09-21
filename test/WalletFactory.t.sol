@@ -5,7 +5,7 @@ import {Wallet, WalletFactory} from "../src/WalletFactory.sol";
 import "@forge/Test.sol";
 
 contract WalletFactoryTest is Test {
-    address constant owner = address(0xa);
+    bytes32 constant owner = bytes32(uint256(uint160(address(0xa))));
 
     WalletFactory immutable wf = new WalletFactory();
 
