@@ -109,21 +109,24 @@ contract Wallet {
         payable
         returns (uint256 validationData)
     {
-        assembly ("memory-safe") {
-            if iszero(eq(caller(), entryPoint)) {
-                // Revert if `msg.sender` is not `entryPoint`.
-                revert(0x00, 0x00)
-            }
-
+        assembly {
+            // Check `msg.sender` is `entryPoint`.
+            if iszero(eq(caller(), entryPoint)) { revert(0x00, 0x00) }
+            // Check `validator` has code at it.
+            // This is much cheaper than sload.
+            // Abuse `validationData` variable
+            // for gas optimization purposes.
             validationData := extcodesize(validator.slot)
         }
 
+        // If `validator` has no code and is therefore unset,
+        // check `owner` signature. Otherwise forward `userOp`.
         validationData = validationData > 0
             ? isValidSignatureNowCalldata(owner, userOpHash, userOp.signature) ? 0 : 1
             : validator.validateUserOp(userOp, userOpHash, missingAccountFunds);
 
+        // Refund `msg.sender` `entryPoint`.
         if (missingAccountFunds != 0) {
-            // Refund `msg.sender` `entryPoint`.
             assembly ("memory-safe") {
                 pop(call(gas(), caller(), missingAccountFunds, 0x00, 0x00, 0x00, 0x00))
             }
