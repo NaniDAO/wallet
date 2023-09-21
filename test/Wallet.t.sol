@@ -40,16 +40,6 @@ contract WalletTest is Test {
         assertEq(address(w).balance, 100 ether);
     }
 
-    function testOnERC721Received() public {
-        assert(w.onERC721Received(address(0), address(0), 0, "") == 0x150b7a02);
-    }
-
-    function testSupportsInterface() public {
-        assertTrue(w.supportsInterface(0x01ffc9a7));
-        assertTrue(w.supportsInterface(0x150b7a02));
-        assertTrue(w.supportsInterface(0x4e2312e0));
-    }
-
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testExecuteCall() public payable {

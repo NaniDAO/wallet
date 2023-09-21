@@ -26,33 +26,6 @@ contract Wallet {
         }
     }
 
-    // Receivers...
-    receive() external payable {}
-
-    function onERC721Received(address, address, uint256, bytes calldata) public payable returns (bytes4) {
-        return this.onERC721Received.selector;
-    }
-
-    function onERC1155Received(address, address, uint256, uint256, bytes calldata) public payable returns (bytes4) {
-        return this.onERC1155Received.selector;
-    }
-
-    function onERC1155BatchReceived(address, address, uint256[] calldata, uint256[] calldata, bytes calldata)
-        public
-        payable
-        returns (bytes4)
-    {
-        return this.onERC1155BatchReceived.selector;
-    }
-
-    // eip-165...
-    function supportsInterface(bytes4 interfaceId) public pure returns (bool supported) {
-        assembly ("memory-safe") {
-            let s := shr(224, interfaceId) //...ERC721TokenReceiver/ERC1155TokenReceiver.
-            supported := or(eq(s, 0x01ffc9a7), or(eq(s, 0x150b7a02), eq(s, 0x4e2312e0)))
-        }
-    }
-
     // eip-1271...
     function isValidSignature(bytes32 hash, bytes calldata sig) public view returns (uint32) {
         return isValidSignatureNowCalldata(owner, hash, sig) ? 0x1626ba7e : 0xffffffff;
@@ -83,6 +56,31 @@ contract Wallet {
         if (missingAccountFunds != 0) {
             assembly ("memory-safe") {
                 pop(call(gas(), caller(), missingAccountFunds, 0x00, 0x00, 0x00, 0x00))
+            }
+        }
+    }
+
+    // Receivers...
+    receive() external payable {}
+
+    fallback() external payable {
+        assembly {
+            let sig := calldataload(0)
+            switch calldataload(0)
+            case 0x150b7a02 {
+                // Equivalent to ERC721_RECEIVED
+                mstore(0x00, sig)
+                return(0x00, 0x20)
+            }
+            case 0xf23a6e61 {
+                // Equivalent to ERC1155_RECEIVED
+                mstore(0x00, sig)
+                return(0x00, 0x20)
+            }
+            case 0xbc197c81 {
+                // Equivalent to ERC1155_BATCH_RECEIVED
+                mstore(0x00, sig)
+                return(0x00, 0x20)
             }
         }
     }
