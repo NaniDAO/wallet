@@ -68,8 +68,8 @@ contract Wallet {
     // (solady/blob/main/src/utils/SignatureCheckerLib.sol)
     // Edited to return uint256 for direct auth validation under eip-4337.
     function _isValidSignature(bytes32 hash, bytes calldata signature) internal view returns (uint256 success) {
-        address signer = address(uint160(uint256(owner)));
-        address result;
+        bytes32 signer = owner;
+        bytes32 result;
         /// @solidity memory-safe-assembly
         assembly {
             let m := mload(0x40) // Cache the free memory pointer.
