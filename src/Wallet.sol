@@ -29,7 +29,7 @@ contract Wallet {
 
     // eip-1271...
     function isValidSignature(bytes32 hash, bytes calldata sig) public view returns (bytes4 y) {
-        if (isValidSignatureNowCalldata(owner, hash, sig)) y = this.isValidSignature.selector;
+        if (isValidSignatureNowCalldata(owner, hash, sig) != 0) y = this.isValidSignature.selector;
     }
 
     // eip-4337...
@@ -56,7 +56,7 @@ contract Wallet {
             if iszero(eq(caller(), entryPoint)) { revert(0, 0) }
         }
 
-        validationData = isValidSignatureNowCalldata(owner, userOpHash, userOp.signature) ? 0 : 1;
+        validationData = isValidSignatureNowCalldata(owner, userOpHash, userOp.signature);
 
         if (missingAccountFunds != 0) {
             assembly ("memory-safe") {
@@ -94,7 +94,7 @@ contract Wallet {
 // (solady/blob/main/src/utils/SignatureCheckerLib.sol)
 function isValidSignatureNowCalldata(address signer, bytes32 hash, bytes calldata signature)
     view
-    returns (bool isValid)
+    returns (uint256 isValid)
 {
     assembly ("memory-safe") {
         // Clean the upper 96 bits of `signer` in case they are dirty.
