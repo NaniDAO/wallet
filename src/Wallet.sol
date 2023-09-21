@@ -4,11 +4,6 @@ pragma solidity ^0.8.19;
 import "./Meta.sol";
 
 contract Wallet {
-    enum Op {
-        call,
-        delegatecall
-    }
-
     address public immutable owner;
 
     // Constructor...
@@ -17,11 +12,11 @@ contract Wallet {
     }
 
     // Execute Op...
-    function execute(address to, uint256 val, bytes calldata data, Op op) public payable {
+    function execute(address to, uint256 val, bytes calldata data, bool del) public payable {
         assembly {
             if iszero(eq(caller(), entryPoint)) { revert(0, 0) }
             let dataMem := mload(data.offset)
-            if iszero(op) {
+            if iszero(del) {
                 let success := call(gas(), to, val, add(dataMem, 0x20), mload(dataMem), gas(), 0x00)
                 returndatacopy(0x00, 0x00, returndatasize())
                 if iszero(success) { revert(0x00, returndatasize()) }

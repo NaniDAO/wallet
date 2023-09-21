@@ -58,26 +58,26 @@ contract WalletTest is Test {
 
     function testExecuteCall() public payable {
         vm.prank(entryPoint);
-        w.execute(bob, 0, abi.encodeWithSignature("foo()"), Wallet.Op.call);
+        w.execute(bob, 0, abi.encodeWithSignature("foo()"), false);
     }
 
     function testExecuteDelegatecall() public payable {
         vm.prank(entryPoint);
-        w.execute(bob, 0, abi.encodeWithSignature("foo()"), Wallet.Op.delegatecall);
+        w.execute(bob, 0, abi.encodeWithSignature("foo()"), true);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testExecuteETHTransfer() public payable {
         vm.prank(entryPoint);
-        w.execute(bob, 1 ether, "", Wallet.Op.call);
+        w.execute(bob, 1 ether, "", false);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testFailNonOwnerExecute() public {
         vm.prank(bob);
-        w.execute(bob, 1 ether, "", Wallet.Op.call);
+        w.execute(bob, 1 ether, "", false);
     }
 }
 
