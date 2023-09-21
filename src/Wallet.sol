@@ -116,9 +116,10 @@ contract Wallet {
             }
         }
 
-        validationData = address(validator) == address(0)
+        Wallet val = validator;
+        validationData = address(val) == address(0)
             ? isValidSignatureNowCalldata(owner, userOpHash, userOp.signature) ? 0 : 1
-            : validator.validateUserOp(userOp, userOpHash, missingAccountFunds);
+            : val.validateUserOp(userOp, userOpHash, missingAccountFunds);
 
         if (missingAccountFunds != 0) {
             // Refund `msg.sender` `entryPoint`.
