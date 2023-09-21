@@ -110,11 +110,12 @@ contract Wallet {
         returns (uint256 validationData)
     {
         assembly ("memory-safe") {
-            validationData := extcodesize(validator.slot)
             if iszero(eq(caller(), entryPoint)) {
                 // Revert if `msg.sender` is not `entryPoint`.
                 revert(0x00, 0x00)
             }
+
+            validationData := extcodesize(validator.slot)
         }
 
         validationData = validationData > 0
