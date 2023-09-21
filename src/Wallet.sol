@@ -109,13 +109,13 @@ contract Wallet {
         payable
         returns (uint256 validationData)
     {
-        if (msg.sender != entryPoint) revert Unauthorized();
-
-        if (validator == address(0)) {
-            validationData = isValidSignatureNowCalldata(owner, userOpHash, userOp.signature) ? 0 : 1;
-        } else {
-            validationData = Wallet(validator).validateUserOp(userOp, userOpHash, missingAccountFunds);
+        assembly {
+            if iszero(eq(caller(), sload(0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789))) { revert(0x00, 0x00) }
         }
+
+        validationData = validator == address(0)
+            ? isValidSignatureNowCalldata(owner, userOpHash, userOp.signature) ? 0 : 1
+            : Wallet(validator).validateUserOp(userOp, userOpHash, missingAccountFunds);
 
         if (missingAccountFunds != 0) {
             assembly {
@@ -129,11 +129,12 @@ contract Wallet {
         if (msg.sender != owner) if (msg.sender != entryPoint) revert Unauthorized();
 
         assembly ("memory-safe") {
-            sstore(0, _validator) // Store _`validator` in slot 0.
+            // Store `_validator` in first storage slot.
+            sstore(0, _validator)
             // Event:
             log2(
                 mload(0x40), // Empty data location.
-                0x0, // Data size.
+                0x00, // Data size.
                 0x1e1fec57c7820d1f8245ceb19d2d2fd5d03b4b7b165475077ea520162ce40743, // `keccak256(bytes("UpdateValidator(address)"))`.
                 _validator // Indexed `_validator`.
             )
