@@ -16,8 +16,8 @@ contract Wallet {
         create
     }
 
-    address payable public validator;
     address public immutable owner;
+    Wallet public validator;
 
     // Constructor...
     constructor(address _owner) payable {
@@ -110,14 +110,18 @@ contract Wallet {
         returns (uint256 validationData)
     {
         assembly ("memory-safe") {
-            if iszero(eq(caller(), entryPoint)) { revert(0x00, 0x00) }
+            if iszero(eq(caller(), entryPoint)) {
+                // Revert if `msg.sender` is not `entryPoint`.
+                revert(0x00, 0x00)
+            }
         }
 
-        validationData = validator == address(0)
+        validationData = address(validator) == address(0)
             ? isValidSignatureNowCalldata(owner, userOpHash, userOp.signature) ? 0 : 1
-            : Wallet(validator).validateUserOp(userOp, userOpHash, missingAccountFunds);
+            : validator.validateUserOp(userOp, userOpHash, missingAccountFunds);
 
         if (missingAccountFunds != 0) {
+            // Refund `msg.sender` `entryPoint`.
             assembly ("memory-safe") {
                 pop(call(gas(), caller(), missingAccountFunds, 0x00, 0x00, 0x00, 0x00))
             }
