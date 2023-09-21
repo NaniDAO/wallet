@@ -110,16 +110,16 @@ contract Wallet {
         returns (uint256 validationData)
     {
         assembly ("memory-safe") {
+            validationData := extcodesize(validator.slot)
             if iszero(eq(caller(), entryPoint)) {
                 // Revert if `msg.sender` is not `entryPoint`.
                 revert(0x00, 0x00)
             }
         }
 
-        Wallet valid = validator;
-        validationData = address(valid) > address(0)
+        validationData = validationData > 0
             ? isValidSignatureNowCalldata(owner, userOpHash, userOp.signature) ? 0 : 1
-            : valid.validateUserOp(userOp, userOpHash, missingAccountFunds);
+            : validator.validateUserOp(userOp, userOpHash, missingAccountFunds);
 
         if (missingAccountFunds != 0) {
             // Refund `msg.sender` `entryPoint`.
