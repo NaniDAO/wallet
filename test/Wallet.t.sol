@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.19;
 
-import "../src/Wallet.sol";
 import "@forge/Test.sol";
+
+import "../src/Wallet.sol";
+import "../src/WalletFactory.sol";
+
+import "@forge/Test.sol";
+
 import {MockERC721} from "@solady/test/utils/mocks/MockERC721.sol";
 
 contract WalletTest is Test {
@@ -25,7 +30,9 @@ contract WalletTest is Test {
         (alice, aliceKey) = makeAddrAndKey("alice");
         (bob, bobKey) = makeAddrAndKey("bob");
 
-        w = new Wallet();
+        WalletFactory f = new WalletFactory();
+        w = f.deploy(alice);
+
         payable(address(w)).transfer(100 ether);
 
         erc721 = new MockERC721();
@@ -34,7 +41,7 @@ contract WalletTest is Test {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testInitialOwner() public payable {
-        //assertEq(w.owner(), alice);
+        assertEq(w.owner(), alice);
     }
 
     function testInitialBalance() public payable {

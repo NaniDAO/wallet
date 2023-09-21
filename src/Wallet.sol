@@ -3,14 +3,10 @@ pragma solidity ^0.8.19;
 
 contract Wallet {
     address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
-    address immutable owner;
+    address public immutable owner;
 
-    constructor() payable {
-        bytes32 hash = keccak256(
-            abi.encodePacked(bytes1(0xff), msg.sender, keccak256(abi.encodePacked(address(this))), keccak256(msg.data))
-        );
-
-        owner = address(uint160(uint256(hash)));
+    constructor(address _owner) payable {
+        owner = _owner;
     }
 
     // Execute Op...
@@ -76,19 +72,16 @@ contract Wallet {
         assembly {
             // Shift right by 224 bits to get the function signature.
             let shiftedSig := shr(224, calldataload(0))
-
             // `keccak256("onERC721Received(address,address,uint256,bytes)")`.
             if eq(shiftedSig, 0x150b7a02) {
                 mstore(0x00, shl(224, shiftedSig))
                 return(0x00, 0x20)
             }
-
             // `keccak256("onERC1155Received(address,address,uint256,uint256,bytes)")`.
             if eq(shiftedSig, 0xf23a6e61) {
                 mstore(0x00, shl(224, shiftedSig))
                 return(0x00, 0x20)
             }
-
             // `keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"`.
             if eq(shiftedSig, 0xbc197c81) {
                 mstore(0x00, shl(224, shiftedSig))

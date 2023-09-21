@@ -7,6 +7,6 @@ contract WalletFactory {
     event Deploy(Wallet indexed wallet);
 
     function deploy(address owner) public payable returns (Wallet wallet) {
-        emit Deploy(wallet = new Wallet{value: msg.value, salt: keccak256(abi.encodePacked(owner))}());
+        emit Deploy(wallet = new Wallet{value: msg.value, salt: bytes32(abi.encodePacked(owner))}(owner));
     }
 }
