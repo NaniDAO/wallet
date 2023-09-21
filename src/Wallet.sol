@@ -69,29 +69,29 @@ contract Wallet {
     receive() external payable {}
 
     fallback() external payable {
-        assembly {
-            // Shift right by 224 bits to get the function signature.
-            let shiftedSig := shr(224, calldataload(0))
-            // `keccak256("onERC721Received(address,address,uint256,bytes)")`.
-            if eq(shiftedSig, 0x150b7a02) {
-                mstore(0x00, shl(224, shiftedSig))
-                return(0x00, 0x20)
+        assembly ("memory-safe") {
+            let s := shr(224, calldataload(0))
+            // `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`.
+            if eq(s, 0x150b7a02) {
+                mstore(0x20, s)
+                return(0x3c, 0x20)
             }
-            // `keccak256("onERC1155Received(address,address,uint256,uint256,bytes)")`.
-            if eq(shiftedSig, 0xf23a6e61) {
-                mstore(0x00, shl(224, shiftedSig))
-                return(0x00, 0x20)
+            // `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes))")`.
+            if eq(s, 0xf23a6e61) {
+                mstore(0x20, s)
+                return(0x3c, 0x20)
             }
-            // `keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"`.
-            if eq(shiftedSig, 0xbc197c81) {
-                mstore(0x00, shl(224, shiftedSig))
-                return(0x00, 0x20)
+            // `bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes))"`.
+            if eq(s, 0xbc197c81) {
+                mstore(0x20, s)
+                return(0x3c, 0x20)
             }
         }
     }
 }
 
 // (solady/blob/main/src/utils/SignatureCheckerLib.sol)
+// Edited to return uint256 for direct auth validation under eip-4337.
 function isValidSignatureNowCalldata(address signer, bytes32 hash, bytes calldata signature)
     view
     returns (uint256 isValid)
