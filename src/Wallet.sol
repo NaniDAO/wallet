@@ -109,8 +109,8 @@ contract Wallet {
         payable
         returns (uint256 validationData)
     {
-        assembly {
-            if iszero(eq(caller(), sload(0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789))) { revert(0x00, 0x00) }
+        assembly ("memory-safe") {
+            if iszero(eq(caller(), entryPoint)) { revert(0x00, 0x00) }
         }
 
         validationData = validator == address(0)
@@ -118,7 +118,7 @@ contract Wallet {
             : Wallet(validator).validateUserOp(userOp, userOpHash, missingAccountFunds);
 
         if (missingAccountFunds != 0) {
-            assembly {
+            assembly ("memory-safe") {
                 pop(call(gas(), caller(), missingAccountFunds, 0x00, 0x00, 0x00, 0x00))
             }
         }
