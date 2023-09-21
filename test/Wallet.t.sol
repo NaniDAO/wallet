@@ -61,13 +61,6 @@ contract WalletTest is Test {
         w.execute(bob, 0, abi.encodeWithSignature("foo()"), Wallet.Op.call);
     }
 
-    function testExecuteCallEvent() public payable {
-        vm.prank(entryPoint);
-        vm.expectEmit(true, true, true, false);
-        emit Execute(bob, 0, abi.encodeWithSignature("foo()"));
-        w.execute(bob, 0, abi.encodeWithSignature("foo()"), Wallet.Op.call);
-    }
-
     function testExecuteDelegatecall() public payable {
         vm.prank(entryPoint);
         w.execute(bob, 0, abi.encodeWithSignature("foo()"), Wallet.Op.delegatecall);
@@ -86,15 +79,6 @@ contract WalletTest is Test {
         vm.prank(bob);
         w.execute(bob, 1 ether, "", Wallet.Op.call);
     }
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    /*function testExecuteCallEvent() public payable {
-        vm.prank(alice);
-        vm.expectEmit(true, true, true, false);
-        emit Execute(bob, 0, abi.encodeWithSignature("foo()"));
-        w.execute(bob, 0, abi.encodeWithSignature("foo()"), Wallet.Op.call);
-    }*/
 }
 
 contract Dummy {}
