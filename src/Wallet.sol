@@ -5,19 +5,13 @@ import "./Meta.sol";
 
 contract Wallet {
     event Execute(address indexed to, uint256 val, bytes data);
-    event UpdateValidator(address indexed validator);
-
-    error InvalidSignature();
-    error Unauthorized();
 
     enum Op {
         call,
-        delegatecall,
-        create
+        delegatecall
     }
 
     address public immutable owner;
-    Wallet public validator;
 
     // Constructor...
     constructor(address _owner) payable {
@@ -26,9 +20,9 @@ contract Wallet {
 
     // Execute Op...
     function execute(address to, uint256 val, bytes calldata data, Op op) public payable {
-        if (msg.sender != owner) if (msg.sender != entryPoint) revert Unauthorized();
-
         assembly {
+            // Check `msg.sender` is `entryPoint`.
+            if iszero(eq(caller(), entryPoint)) { revert(0, 0) }
             let dataMem := mload(data.offset) // Load `data` from calldata.
             // Event:
             log2(
@@ -49,24 +43,14 @@ contract Wallet {
                 return(0x00, returndatasize())
             }
             // `Op.delegatecall`.
-            if eq(op, 1) {
-                // Perform a `delegatecall()` with the given parameters.
-                let success := delegatecall(gas(), to, add(dataMem, 0x20), mload(dataMem), gas(), 0x00)
-                // Copy the returned data to memory.
-                returndatacopy(0x00, 0x00, returndatasize())
-                // Revert if the `delegatecall()` was unsuccessful.
-                if iszero(success) { revert(0x00, returndatasize()) }
-                // Otherwise, return the data.
-                return(0x00, returndatasize())
-            }
-            // `Op.create`.
-            let created := create(val, add(dataMem, 0x20), mload(dataMem))
-            // Revert if contract creation was unsuccessful.
-            if iszero(created) { revert(0x00, 0x00) }
-            // Otherwise, copy the address to memory.
-            mstore(0x00, created)
-            // Return the address.
-            return(0x00, 0x20)
+            // Perform a `delegatecall()` with the given parameters.
+            let success := delegatecall(gas(), to, add(dataMem, 0x20), mload(dataMem), gas(), 0x00)
+            // Copy the returned data to memory.
+            returndatacopy(0x00, 0x00, returndatasize())
+            // Revert if the `delegatecall()` was unsuccessful.
+            if iszero(success) { revert(0x00, returndatasize()) }
+            // Otherwise, return the data.
+            return(0x00, returndatasize())
         }
     }
 
@@ -109,19 +93,19 @@ contract Wallet {
         payable
         returns (uint256 validationData)
     {
+        Wallet validator;
+        bytes calldata extractedCallData = userOp.callData;
+
         assembly {
             // Check `msg.sender` is `entryPoint`.
-            if iszero(eq(caller(), entryPoint)) { revert(0x00, 0x00) }
-            // Check `validator` has code at it.
-            // This is much cheaper than sload.
-            // Abuse `validationData` variable
-            // for gas optimization purposes.
-            validationData := extcodesize(validator.slot)
+            if iszero(eq(caller(), entryPoint)) { revert(0, 0) }
+            // Extract the address from the first 20 bytes of callData
+            validator := shr(96, calldataload(add(add(extractedCallData.offset, 36), 32)))
         }
 
-        // If `validator` has no code and is therefore unset,
+        // If `validator` is not included (first 20 bytes empty),
         // check `owner` signature. Otherwise forward `userOp`.
-        validationData = validationData > 0
+        validationData = address(validator) > address(0)
             ? isValidSignatureNowCalldata(owner, userOpHash, userOp.signature) ? 0 : 1
             : validator.validateUserOp(userOp, userOpHash, missingAccountFunds);
 
@@ -130,23 +114,6 @@ contract Wallet {
             assembly ("memory-safe") {
                 pop(call(gas(), caller(), missingAccountFunds, 0x00, 0x00, 0x00, 0x00))
             }
-        }
-    }
-
-    // Validator Setting...
-    function updateValidator(address _validator) public payable {
-        if (msg.sender != owner) if (msg.sender != entryPoint) revert Unauthorized();
-
-        assembly ("memory-safe") {
-            // Store `_validator` in first storage slot.
-            sstore(0, _validator)
-            // Event:
-            log2(
-                mload(0x40), // Empty data location.
-                0x00, // Data size.
-                0x1e1fec57c7820d1f8245ceb19d2d2fd5d03b4b7b165475077ea520162ce40743, // `keccak256(bytes("UpdateValidator(address)"))`.
-                _validator // Indexed `_validator`.
-            )
         }
     }
 }

@@ -57,31 +57,26 @@ contract WalletTest is Test {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testExecuteCall() public payable {
-        vm.prank(alice);
+        vm.prank(entryPoint);
         w.execute(bob, 0, abi.encodeWithSignature("foo()"), Wallet.Op.call);
     }
 
     function testExecuteCallEvent() public payable {
-        vm.prank(alice);
+        vm.prank(entryPoint);
         vm.expectEmit(true, true, true, false);
         emit Execute(bob, 0, abi.encodeWithSignature("foo()"));
         w.execute(bob, 0, abi.encodeWithSignature("foo()"), Wallet.Op.call);
     }
 
     function testExecuteDelegatecall() public payable {
-        vm.prank(alice);
+        vm.prank(entryPoint);
         w.execute(bob, 0, abi.encodeWithSignature("foo()"), Wallet.Op.delegatecall);
-    }
-
-    function testExecuteCreate() public payable {
-        vm.prank(alice);
-        w.execute(address(0), 0, type(Dummy).creationCode, Wallet.Op.create);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testExecuteETHTransfer() public payable {
-        vm.prank(alice);
+        vm.prank(entryPoint);
         w.execute(bob, 1 ether, "", Wallet.Op.call);
     }
 
@@ -93,23 +88,6 @@ contract WalletTest is Test {
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    function testUpdateValidator() public payable {
-        vm.prank(alice);
-        w.updateValidator(bob);
-    }
-
-    function testUpdateValidatorEvent() public payable {
-        // Set the caller for the next transaction to be 'alice'
-        vm.prank(alice);
-
-        // Expect the 'UpdateValidator' event to be emitted.
-        // This example checks topic0 (always checked), topic1 (true), but NOT topic2 and data (both false).
-        vm.expectEmit(true, true, false, false);
-        emit UpdateValidator(bob);
-        // Perform the call to the 'updateValidator' function.
-        w.updateValidator(bob);
-    }
 
     /*function testExecuteCallEvent() public payable {
         vm.prank(alice);
