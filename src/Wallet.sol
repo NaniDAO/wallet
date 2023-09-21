@@ -117,7 +117,7 @@ contract Wallet {
         }
 
         Wallet val = validator;
-        validationData = address(val) == address(0)
+        validationData = address(val) > address(0)
             ? isValidSignatureNowCalldata(owner, userOpHash, userOp.signature) ? 0 : 1
             : val.validateUserOp(userOp, userOpHash, missingAccountFunds);
 
