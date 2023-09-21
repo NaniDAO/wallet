@@ -12,7 +12,7 @@ contract Wallet {
     }
 
     address public immutable owner;
-
+    
     // Constructor...
     constructor(address _owner) payable {
         owner = _owner;
@@ -95,7 +95,12 @@ contract Wallet {
     {
         Wallet validator;
         bytes calldata extractedCallData = userOp.callData;
-
+        
+        // @TODO use nonce for branching off 
+        // nonce if > 100  
+        // check first 20 bytes of signature for extracting out validator 
+        // call validator with userOp - send rest of the signature to the validator.validateUserOp;
+        // else use 
         assembly {
             // Check `msg.sender` is `entryPoint`.
             if iszero(eq(caller(), entryPoint)) { revert(0, 0) }
