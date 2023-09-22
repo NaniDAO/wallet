@@ -5,6 +5,8 @@ contract Wallet {
     address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     bytes32 immutable owner;
 
+    // todo: can we make owner constant since salt?
+
     constructor(bytes32 _owner) payable {
         owner = _owner;
     }
@@ -56,6 +58,7 @@ contract Wallet {
             if iszero(eq(caller(), entryPoint)) { revert(0, 0) }
         }
 
+        // ToDo: add nonce switch
         validationData = _isValidSignature(userOpHash, userOp.signature);
 
         if (missingAccountFunds != 0) {
@@ -64,6 +67,8 @@ contract Wallet {
             }
         }
     }
+
+    // todo: do we want eip1271
 
     // (solady/blob/main/src/utils/ECDSA.sol)
     // Edited to return uint256 for eip-4337 validation.
