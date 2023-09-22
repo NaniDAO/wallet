@@ -90,13 +90,14 @@ contract Wallet {
                         0x01, // Start of output.
                         0x20 // Size of output.
                     )
-                // `returndatasize()` will be `0x20` upon success, and `0x00` otherwise.
-                if iszero(or(iszero(returndatasize()), xor(_owner, mload(t)))) { isValid := 0 }
+                if iszero(xor(_owner, mload(t))) { 
+                    isValid := 0 
+                }
             }
             mstore(0x60, 0) // Restore the zero slot.
             mstore(0x40, m) // Restore the free memory pointer.
 
-            if eq(isValid, 1) {
+            if isValid {
                 let f := shl(224, 0x1626ba7e)
                 mstore(m, f) // `bytes4(keccak256("isValidSignature(bytes32,bytes)"))`.
                 mstore(add(m, 0x04), hash)
