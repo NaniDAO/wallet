@@ -90,9 +90,7 @@ contract Wallet {
                         0x01, // Start of output.
                         0x20 // Size of output.
                     )
-                if iszero(xor(_owner, mload(t))) { 
-                    isValid := 0 
-                }
+                isValid := xor(_owner, mload(t))
             }
             mstore(0x60, 0) // Restore the zero slot.
             mstore(0x40, m) // Restore the free memory pointer.
@@ -106,22 +104,20 @@ contract Wallet {
                 mstore(add(m, 0x44), signature.length)
                 // Copy the `signature` over.
                 calldatacopy(add(m, 0x64), signature.offset, signature.length)
-                // forgefmt: disable-next-item
-                isValid := iszero(and(
-                    // Whether the returndata is the magic value `0x1626ba7e` (left-aligned).
-                    eq(mload(d), f),
-                    // Whether the staticcall does not revert.
-                    // This must be placed at the end of the `and` clause,
-                    // as the arguments are evaluated from right to left.
-                    staticcall(
-                        gas(), // Remaining gas.
-                        _owner, // The `owner` address.
-                        m, // Offset of calldata in memory.
-                        add(signature.length, 0x64), // Length of calldata in memory.
-                        d, // Offset of returndata.
-                        0x20 // Length of returndata to write.
+                isValid :=
+                    iszero(
+                        eq(
+                            staticcall(
+                                gas(), // Remaining gas.
+                                _owner, // The `owner` address.
+                                m, // Offset of calldata in memory.
+                                add(signature.length, 0x64), // Length of calldata in memory.
+                                d, // Offset of returndata.
+                                0x20 // Length of returndata to write.
+                            ),
+                            f
+                        )
                     )
-                ))
             }
         }
     }

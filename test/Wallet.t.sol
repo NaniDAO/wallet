@@ -186,7 +186,7 @@ contract WalletTest is Test {
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
+
     function sign(uint pK, bytes32 hash) internal pure returns (bytes memory sig) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pK, hash);
         sig = abi.encodePacked(r, s, v);
