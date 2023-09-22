@@ -65,18 +65,16 @@ contract Wallet {
         }
     }
 
-    // (solady/blob/main/src/utils/SignatureCheckerLib.sol)
-    // Edited to return uint256 for direct auth validation under eip-4337.
-    function _isValidSignature(bytes32 hash, bytes calldata signature) internal view returns (uint256 success) {
-        bytes32 signer = owner;
-        bytes32 result;
-        /// @solidity memory-safe-assembly
-        assembly {
+    // (solady/blob/main/src/utils/ECDSA.sol)
+    // Edited to return uint256 for eip-4337 validation.
+    function _isValidSignature(bytes32 hash, bytes calldata signature) internal view returns (uint8 valid) {
+        bytes32 _owner = owner;
+        assembly ("memory-safe") {
             let m := mload(0x40) // Cache the free memory pointer.
             mstore(0x00, hash)
             mstore(0x20, byte(0, calldataload(add(signature.offset, 0x40)))) // `v`.
             calldatacopy(0x40, signature.offset, 0x40) // Copy `r` and `s`.
-            result :=
+            let result :=
                 mload(
                     staticcall(
                         gas(), // Amount of gas left for the transaction.
@@ -88,8 +86,8 @@ contract Wallet {
                     )
                 )
             // `returndatasize()` will be `0x20` upon success, and `0x00` otherwise.
-            if iszero(returndatasize()) { success := 1 }
-            if iszero(eq(signer, result)) { success := 1 }
+            if iszero(returndatasize()) { valid := 1 }
+            if iszero(eq(_owner, result)) { valid := 1 }
             mstore(0x60, 0) // Restore the zero slot.
             mstore(0x40, m) // Restore the free memory pointer.
         }
