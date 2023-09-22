@@ -10,7 +10,11 @@ import '@forge/Test.sol';
 
 import {MockERC721} from '@solady/test/utils/mocks/MockERC721.sol';
 import {MockERC1155} from '@solady/test/utils/mocks/MockERC1155.sol';
-import {MockERC1271Wallet} from "@solady/test/utils/mocks/MockERC1271Wallet.sol";
+import {MockERC1271Wallet} from '@solady/test/utils/mocks/MockERC1271Wallet.sol';
+
+interface IEntryPoint {
+    function getUserOpHash(Wallet.UserOperation calldata userOp) external view returns (bytes32);
+}
 
 contract WalletTest is Test {
     address aliceAddr;
@@ -33,7 +37,7 @@ contract WalletTest is Test {
 
     function setUp() public payable {
         // Create Ethereum fork.
-        vm.createSelectFork(vm.rpcUrl("main"));
+        vm.createSelectFork(vm.rpcUrl('main'));
 
         (aliceAddr, aliceKey) = makeAddrAndKey('alice');
         (bobAddr, bobKey) = makeAddrAndKey('bob');
@@ -143,10 +147,53 @@ contract WalletTest is Test {
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-    
-    function testValidateUserOp() public payable {
-        vm.prank(entryPoint);
 
-        wallet.validateUserOp(userOp)
+    function createUserOp() internal view returns (Wallet.UserOperation memory userOp) {
+        userOp.sender = address(w);
+        userOp.nonce = 0;
+        userOp.initCode = bytes('');
+        userOp.callData = bytes('');
+        userOp.callGasLimit = 0;
+        userOp.verificationGasLimit = 0;
+        userOp.preVerificationGas = 0;
+        userOp.maxFeePerGas = 0;
+        userOp.maxPriorityFeePerGas = 0;
+        userOp.paymasterAndData = bytes('');        
+        userOp.signature = aliceSign(IEntryPoint(entryPoint).getUserOpHash(userOp));
+    }
+
+    function createBadUserOp() public view returns (Wallet.UserOperation memory userOp) {
+        userOp.sender = address(w);
+        userOp.nonce = 0;
+        userOp.initCode = bytes('');
+        userOp.callData = bytes('');
+        userOp.callGasLimit = 0;
+        userOp.verificationGasLimit = 0;
+        userOp.preVerificationGas = 0;
+        userOp.maxFeePerGas = 0;
+        userOp.maxPriorityFeePerGas = 0;
+        userOp.paymasterAndData = bytes('');
+        userOp.signature = '';
+    }
+
+    function testValidateUserOp() public payable {
+        Wallet.UserOperation memory userOp = createUserOp();
+        bytes32 userOpHash = IEntryPoint(entryPoint).getUserOpHash(userOp);
+        vm.prank(entryPoint);
+        uint validationData = w.validateUserOp(userOp, userOpHash, 0);
+        assertEq(validationData, 0);
+    }
+
+    function testBadValidateUserOp() public payable {
+        Wallet.UserOperation memory userOp = createBadUserOp();
+        bytes32 userOpHash = IEntryPoint(entryPoint).getUserOpHash(userOp);
+        vm.prank(entryPoint);
+        uint validationData = w.validateUserOp(userOp, userOpHash, 0);
+        assertEq(validationData, 1);
+    }
+
+    function aliceSign(bytes32 hash) internal view returns (bytes memory sig) {
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, hash);
+        sig = abi.encodePacked(r, s, v);
     }
 }
