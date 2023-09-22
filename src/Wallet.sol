@@ -75,12 +75,12 @@ contract Wallet {
         bytes32 _owner = owner;
         assembly ("memory-safe") {
             let m := mload(0x40)
-            
             if eq(signature.length, 65) {
                 mstore(0x00, hash)
                 mstore(0x20, byte(0, calldataload(add(signature.offset, 0x40)))) // `v`.
                 calldatacopy(0x40, signature.offset, 0x40) // `r`, `s`.
-                let t :=
+                // forgefmt: disable-next-item
+                isValid := xor(_owner, mload(
                     staticcall(
                         gas(), // Amount of gas left for the transaction.
                         1, // Address of `ecrecover`.
@@ -88,12 +88,11 @@ contract Wallet {
                         0x80, // Size of input.
                         0x01, // Start of output.
                         0x20 // Size of output.
-                    )
-                isValid := xor(_owner, mload(t))
+                    ))
+                )
             }
             mstore(0x60, 0) // Restore the zero slot.
             mstore(0x40, m) // Restore the free memory pointer.
-
             if isValid {
                 let f := shl(224, 0x1626ba7e)
                 mstore(m, f) // `bytes4(keccak256("isValidSignature(bytes32,bytes)"))`.
