@@ -73,6 +73,13 @@ contract WalletTest is Test {
         w.execute(bob, 1 ether, '', 0);
     }
 
+    function testExecuteETHTransferResult() public payable {
+        assertEq(bobAddr.balance, 0 ether);
+        vm.prank(entryPoint);
+        w.execute(bob, 1 ether, '', 0);
+        assertEq(bobAddr.balance, 1 ether);
+    }
+
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testFailNonOwnerExecute() public payable {
