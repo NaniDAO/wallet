@@ -12,8 +12,6 @@ import {MockERC721} from "@solady/test/utils/mocks/MockERC721.sol";
 import {MockERC1155} from "@solady/test/utils/mocks/MockERC1155.sol";
 
 contract WalletTest is Test {
-    event Execute(address indexed to, uint256 val, bytes data);
-
     address aliceAddr;
     bytes32 alice;
     uint256 aliceKey;
@@ -34,7 +32,7 @@ contract WalletTest is Test {
         (bob, bobKey) = makeAddrAndKey("bob");
 
         WalletFactory f = new WalletFactory();
-        w = f.deploy(bytes32(uint256(uint160(aliceAddr))));
+        w = f.deploy(alice = bytes32(uint256(uint160(aliceAddr))));
 
         payable(address(w)).transfer(100 ether);
 
@@ -44,12 +42,13 @@ contract WalletTest is Test {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function testInitialOwner() public payable {
-        //assertEq(w.owner(), alice);
-    }
-
     function testInitialBalance() public payable {
         assertEq(address(w).balance, 100 ether);
+    }
+
+    function testReceiveETH() public payable {
+        payable(address(w)).transfer(100 ether);
+        assertEq(address(w).balance, 200 ether);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -120,6 +120,9 @@ contract Wallet {
         }
     }
 
+    // Receivers...
+    receive() external payable {}
+
     fallback() external payable {
         assembly ("memory-safe") {
             let s := shr(224, calldataload(0))
