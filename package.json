@@ -11,8 +11,8 @@
     "license": "AGPL-3.0-only",
     "private": false,
     "scripts": {
-      "setup": "forge clean && forge build --optimize --optimizer-runs 9999999",
+      "start": "forge clean && forge build && forge fmt --optimize --optimizer-runs 9999999",
       "test": "forge clean && forge test --optimize --optimizer-runs 9999999 -vvv",
-      "snapshot": "forge clean && forge snapshot --optimize --optimizer-runs 9999999"
+      "snap": "forge clean && forge snapshot --optimize --optimizer-runs 9999999"
     }
   }
