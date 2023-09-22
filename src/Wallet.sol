@@ -67,7 +67,7 @@ contract Wallet {
 
     // (solady/blob/main/src/utils/ECDSA.sol)
     // Edited to return uint256 for eip-4337 validation.
-    function _isValidSignature(bytes32 hash, bytes calldata signature) internal view returns (uint8 valid) {
+    function _isValidSignature(bytes32 hash, bytes calldata signature) internal view returns (uint256 flag) {
         bytes32 _owner = owner;
         assembly ("memory-safe") {
             let m := mload(0x40) // Cache the free memory pointer.
@@ -86,10 +86,37 @@ contract Wallet {
                     )
                 )
             // `returndatasize()` will be `0x20` upon success, and `0x00` otherwise.
-            if iszero(returndatasize()) { valid := 1 }
-            if iszero(eq(_owner, result)) { valid := 1 }
+            if iszero(returndatasize()) { flag := 1 }
+            if iszero(eq(_owner, result)) { flag := 1 }
             mstore(0x60, 0) // Restore the zero slot.
             mstore(0x40, m) // Restore the free memory pointer.
+
+            if eq(flag, 1) {
+                let f := shl(224, 0x1626ba7e)
+                mstore(m, f) // `bytes4(keccak256("isValidSignature(bytes32,bytes)"))`.
+                mstore(add(m, 0x04), hash)
+                let d := add(m, 0x24)
+                mstore(d, 0x40) // The offset of the `signature` in the calldata.
+                mstore(add(m, 0x44), signature.length)
+                // Copy the `signature` over.
+                calldatacopy(add(m, 0x64), signature.offset, signature.length)
+                // forgefmt: disable-next-item
+                flag := iszero(and(
+                    // Whether the returndata is the magic value `0x1626ba7e` (left-aligned).
+                    eq(mload(d), f),
+                    // Whether the staticcall does not revert.
+                    // This must be placed at the end of the `and` clause,
+                    // as the arguments are evaluated from right to left.
+                    staticcall(
+                        gas(), // Remaining gas.
+                        _owner, // The `owner` address.
+                        m, // Offset of calldata in memory.
+                        add(signature.length, 0x64), // Length of calldata in memory.
+                        d, // Offset of returndata.
+                        0x20 // Length of returndata to write.
+                    )
+                ))
+            }
         }
     }
 
