@@ -5,8 +5,6 @@ contract Wallet {
     address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     bytes32 immutable owner;
 
-    // todo: can we make owner constant since salt?
-
     constructor(bytes32 _owner) payable {
         owner = _owner;
     }
@@ -58,8 +56,23 @@ contract Wallet {
             if iszero(eq(caller(), entryPoint)) { revert(0, 0) }
         }
 
-        // ToDo: add nonce switch
         validationData = _isValidSignature(userOpHash, userOp.signature);
+
+        uint256 key = userOp.nonce >> 64;
+        if (key > 100) {
+            Wallet validator;
+            assembly {
+                let userOpMem := userOp // This is the memory location of the userOp struct.
+                let signatureOffset := 0x140 // This is the offset to the signature field.
+                let signatureMem := add(userOpMem, signatureOffset) // This is the memory location of the signature field.
+                let word := mload(add(signatureMem, 0x20))
+                validator := shr(96, word)
+                mstore(signatureMem, sub(mload(signatureMem), 20))
+                mstore(add(signatureMem, 0x20), add(add(signatureMem, 0x20), 20))
+            }
+
+            validationData = validator.validateUserOp(userOp, userOpHash, key);
+        }
 
         if (missingAccountFunds != 0) {
             assembly ("memory-safe") {
@@ -67,8 +80,6 @@ contract Wallet {
             }
         }
     }
-
-    // todo: do we want eip1271
 
     // (solady/blob/main/src/utils/ECDSA.sol)
     // Edited to return uint256 for eip-4337 validation.
