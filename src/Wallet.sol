@@ -58,22 +58,6 @@ contract Wallet {
 
         validationData = _isValidSignature(userOpHash, userOp.signature);
 
-        uint256 key = userOp.nonce >> 64;
-        if (key > 100) {
-            Wallet validator;
-            assembly {
-                let userOpMem := userOp // This is the memory location of the userOp struct.
-                let signatureOffset := 0x140 // This is the offset to the signature field.
-                let signatureMem := add(userOpMem, signatureOffset) // This is the memory location of the signature field.
-                let word := mload(add(signatureMem, 0x20))
-                validator := shr(96, word)
-                mstore(signatureMem, sub(mload(signatureMem), 20))
-                mstore(add(signatureMem, 0x20), add(add(signatureMem, 0x20), 20))
-            }
-
-            validationData = validator.validateUserOp(userOp, userOpHash, key);
-        }
-
         if (missingAccountFunds != 0) {
             assembly ("memory-safe") {
                 pop(call(gas(), caller(), missingAccountFunds, 0x00, 0x00, 0x00, 0x00))

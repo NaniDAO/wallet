@@ -1,0 +1,18 @@
+{
+    "name": "wallet",
+    "version": "1.0",
+    "description": "Minimalist EIP-4337 Wallet",
+    "main": "index.js",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/nanidao/wallet.git"
+    },
+    "author": "Nani Kotoba DAO LLC <me@nani.ooo>",
+    "license": "AGPL-3.0-only",
+    "private": false,
+    "scripts": {
+      "setup": "forge clean && forge build --optimize --optimizer-runs 9999999",
+      "test": "forge clean && forge test --optimize --optimizer-runs 9999999 -vvv",
+      "snapshot": "forge clean && forge snapshot --optimize --optimizer-runs 9999999"
+    }
+  }
