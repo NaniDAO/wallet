@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity ^0.8.19;
 
-import "@forge/Test.sol";
+import '@forge/Test.sol';
 
-import "../src/Wallet.sol";
-import "../src/WalletFactory.sol";
+import '../src/Wallet.sol';
+import '../src/WalletFactory.sol';
 
-import "@forge/Test.sol";
+import '@forge/Test.sol';
 
-import {MockERC721} from "@solady/test/utils/mocks/MockERC721.sol";
-import {MockERC1155} from "@solady/test/utils/mocks/MockERC1155.sol";
+import {MockERC721} from '@solady/test/utils/mocks/MockERC721.sol';
+import {MockERC1155} from '@solady/test/utils/mocks/MockERC1155.sol';
 
 contract WalletTest is Test {
     address aliceAddr;
     bytes32 alice;
-    uint256 aliceKey;
+    uint aliceKey;
 
     address bob;
-    uint256 bobKey;
+    uint bobKey;
 
     address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
 
@@ -28,11 +28,11 @@ contract WalletTest is Test {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function setUp() public payable {
-        (aliceAddr, aliceKey) = makeAddrAndKey("alice");
-        (bob, bobKey) = makeAddrAndKey("bob");
+        (aliceAddr, aliceKey) = makeAddrAndKey('alice');
+        (bob, bobKey) = makeAddrAndKey('bob');
 
         WalletFactory f = new WalletFactory();
-        w = f.deploy(alice = bytes32(uint256(uint160(aliceAddr))));
+        w = f.deploy(alice = bytes32(uint(uint160(aliceAddr))));
 
         payable(address(w)).transfer(100 ether);
 
@@ -55,30 +55,30 @@ contract WalletTest is Test {
 
     function testExecuteCall() public payable {
         vm.prank(entryPoint);
-        w.execute(bob, 0, abi.encodeWithSignature("foo()"), false);
+        w.execute(bob, 0, abi.encodeWithSignature('foo()'), 0);
     }
 
     function testExecuteDelegatecall() public payable {
         vm.prank(entryPoint);
-        w.execute(bob, 0, abi.encodeWithSignature("foo()"), true);
+        w.execute(bob, 0, abi.encodeWithSignature('foo()'), 1);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testExecuteETHTransfer() public payable {
         vm.prank(entryPoint);
-        w.execute(bob, 1 ether, "", false);
+        w.execute(bob, 1 ether, '', 0);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testFailNonOwnerExecute() public payable {
         vm.prank(bob);
-        w.execute(bob, 1 ether, "", false);
+        w.execute(bob, 1 ether, '', 0);
     }
 
     function testIsValidSignature() public payable {
-        bytes32 hash = keccak256(bytes("FOO"));
+        bytes32 hash = keccak256(bytes('FOO'));
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, hash);
         bytes memory sig = abi.encodePacked(r, s, v);
@@ -97,18 +97,18 @@ contract WalletTest is Test {
     }
 
     function testOnERC1155Received() public payable {
-        erc1155.mint(aliceAddr, 1, 1, "");
+        erc1155.mint(aliceAddr, 1, 1, '');
         vm.prank(aliceAddr);
-        erc1155.safeTransferFrom(aliceAddr, address(w), 1, 1, "");
+        erc1155.safeTransferFrom(aliceAddr, address(w), 1, 1, '');
     }
 
     function testOnERC1155BatchReceived() public payable {
-        erc1155.mint(aliceAddr, 1, 1, "");
+        erc1155.mint(aliceAddr, 1, 1, '');
         vm.prank(aliceAddr);
-        uint256[] memory ids = new uint256[](1);
+        uint[] memory ids = new uint256[](1);
         ids[0] = 1;
-        uint256[] memory amts = new uint256[](1);
+        uint[] memory amts = new uint256[](1);
         amts[0] = 1;
-        erc1155.safeBatchTransferFrom(aliceAddr, address(w), ids, amts, "");
+        erc1155.safeBatchTransferFrom(aliceAddr, address(w), ids, amts, '');
     }
 }

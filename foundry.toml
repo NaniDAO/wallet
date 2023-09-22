@@ -8,6 +8,11 @@ remappings = [
   "@solady=lib/solady/"
 ]
 
+[fmt]
+line_length = 100 # While we allow up to 120, we lint at 100 for readability.
+quote_style = 'single'
+int_types = 'short'
+
 [rpc_endpoints]
 main = "https://rpc.ankr.com/eth"
 base = "https://rpc.ankr.com/base"

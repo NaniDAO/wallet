@@ -10,11 +10,11 @@ contract Wallet {
     }
 
     // Execute Op...
-    function execute(address to, uint256 val, bytes calldata data, bool del) public payable {
+    function execute(address to, uint val, bytes calldata data, uint op) public payable {
         assembly {
             if iszero(eq(caller(), entryPoint)) { revert(0, 0) }
             let dataMem := mload(data.offset)
-            if iszero(del) {
+            if iszero(op) {
                 let success := call(gas(), to, val, add(dataMem, 0x20), mload(dataMem), gas(), 0x00)
                 returndatacopy(0x00, 0x00, returndatasize())
                 if iszero(success) { revert(0x00, returndatasize()) }
@@ -35,23 +35,23 @@ contract Wallet {
     // eip-4337...
     struct UserOperation {
         address sender;
-        uint256 nonce;
+        uint nonce;
         bytes initCode;
         bytes callData;
-        uint256 callGasLimit;
-        uint256 verificationGasLimit;
-        uint256 preVerificationGas;
-        uint256 maxFeePerGas;
-        uint256 maxPriorityFeePerGas;
+        uint callGasLimit;
+        uint verificationGasLimit;
+        uint preVerificationGas;
+        uint maxFeePerGas;
+        uint maxPriorityFeePerGas;
         bytes paymasterAndData;
         bytes signature;
     }
 
-    function validateUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
-        public
-        payable
-        returns (uint256 validationData)
-    {
+    function validateUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash,
+        uint missingAccountFunds
+    ) public payable returns (uint validationData) {
         assembly ("memory-safe") {
             if iszero(eq(caller(), entryPoint)) { revert(0, 0) }
         }
@@ -66,8 +66,12 @@ contract Wallet {
     }
 
     // (solady/blob/main/src/utils/ECDSA.sol)
-    // Edited to return uint256 for eip-4337 validation.
-    function _isValidSignature(bytes32 hash, bytes calldata signature) internal view returns (uint256 flag) {
+    // Edited to return uint for eip-4337 validation.
+    function _isValidSignature(bytes32 hash, bytes calldata signature)
+        internal
+        view
+        returns (uint flag)
+    {
         bytes32 _owner = owner;
         assembly ("memory-safe") {
             let m := mload(0x40) // Cache the free memory pointer.
@@ -126,17 +130,17 @@ contract Wallet {
     fallback() external payable {
         assembly ("memory-safe") {
             let s := shr(224, calldataload(0))
-            // `bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"))`.
+            // `bytes4(keccak256("onERC721Received(address,address,uint,bytes)"))`.
             if eq(s, 0x150b7a02) {
                 mstore(0x20, s)
                 return(0x3c, 0x20)
             }
-            // `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes))")`.
+            // `bytes4(keccak256("onERC1155Received(address,address,uint,uint,bytes))")`.
             if eq(s, 0xf23a6e61) {
                 mstore(0x20, s)
                 return(0x3c, 0x20)
             }
-            // `bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes))"`.
+            // `bytes4(keccak256("onERC1155BatchReceived(address,address,uint[],uint[],bytes))"`.
             if eq(s, 0xbc197c81) {
                 mstore(0x20, s)
                 return(0x3c, 0x20)
