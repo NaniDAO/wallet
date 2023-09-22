@@ -16,7 +16,8 @@ contract WalletTest is Test {
     bytes32 alice;
     uint aliceKey;
 
-    address bob;
+    address bobAddr;
+    bytes32 bob;
     uint bobKey;
 
     address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
@@ -29,10 +30,12 @@ contract WalletTest is Test {
 
     function setUp() public payable {
         (aliceAddr, aliceKey) = makeAddrAndKey('alice');
-        (bob, bobKey) = makeAddrAndKey('bob');
+        (bobAddr, bobKey) = makeAddrAndKey('bob');
 
         WalletFactory f = new WalletFactory();
         w = f.deploy(alice = bytes32(uint(uint160(aliceAddr))));
+
+        bob = bytes32(uint(uint160(bobAddr)));
 
         payable(address(w)).transfer(100 ether);
 
@@ -73,7 +76,7 @@ contract WalletTest is Test {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testFailNonOwnerExecute() public payable {
-        vm.prank(bob);
+        vm.prank(bobAddr);
         w.execute(bob, 1 ether, '', 0);
     }
 

@@ -10,7 +10,7 @@ contract Wallet {
     }
 
     // Execute Op...
-    function execute(address to, uint val, bytes calldata data, uint op) public payable {
+    function execute(bytes32 to, uint val, bytes calldata data, uint op) public payable {
         assembly {
             if iszero(eq(caller(), entryPoint)) { revert(0, 0) }
             let dataMem := mload(data.offset)
@@ -97,7 +97,7 @@ contract Wallet {
 
             if eq(flag, 1) {
                 let f := shl(224, 0x1626ba7e)
-                mstore(m, f) // `bytes4(keccak256("isValidSignature(bytes32,bytes)"))`.
+                mstore(m, f) // `bytes4(keccak256('isValidSignature(bytes32,bytes)'))`.
                 mstore(add(m, 0x04), hash)
                 let d := add(m, 0x24)
                 mstore(d, 0x40) // The offset of the `signature` in the calldata.
@@ -130,17 +130,17 @@ contract Wallet {
     fallback() external payable {
         assembly ("memory-safe") {
             let s := shr(224, calldataload(0))
-            // `bytes4(keccak256("onERC721Received(address,address,uint,bytes)"))`.
+            // `bytes4(keccak256('onERC721Received(address,address,uint,bytes)'))`.
             if eq(s, 0x150b7a02) {
                 mstore(0x20, s)
                 return(0x3c, 0x20)
             }
-            // `bytes4(keccak256("onERC1155Received(address,address,uint,uint,bytes))")`.
+            // `bytes4(keccak256('onERC1155Received(address,address,uint,uint,bytes))')`.
             if eq(s, 0xf23a6e61) {
                 mstore(0x20, s)
                 return(0x3c, 0x20)
             }
-            // `bytes4(keccak256("onERC1155BatchReceived(address,address,uint[],uint[],bytes))"`.
+            // `bytes4(keccak256('onERC1155BatchReceived(address,address,uint[],uint[],bytes))'`.
             if eq(s, 0xbc197c81) {
                 mstore(0x20, s)
                 return(0x3c, 0x20)
