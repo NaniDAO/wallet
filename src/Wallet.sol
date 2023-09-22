@@ -12,7 +12,7 @@ contract Wallet {
     // Execute Op...
     function execute(bytes32 to, uint val, bytes calldata data, uint op) public payable {
         assembly {
-            if iszero(eq(caller(), entryPoint)) { revert(0, 0) }
+            if xor(caller(), entryPoint) { revert(0, 0) }
             let dataMem := mload(data.offset)
             if iszero(op) {
                 let success := call(gas(), to, val, add(dataMem, 0x20), mload(dataMem), gas(), 0x00)
