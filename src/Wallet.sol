@@ -2,8 +2,8 @@
 pragma solidity ^0.8.19;
 
 contract Wallet {
-    address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     bytes32 immutable owner;
+    address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
 
     constructor(bytes32 _owner) payable {
         owner = _owner;
