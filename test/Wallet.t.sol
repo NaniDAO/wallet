@@ -14,6 +14,8 @@ import {MockERC1271Wallet} from '@solady/test/utils/mocks/MockERC1271Wallet.sol'
 
 interface IEntryPoint {
     function getUserOpHash(Wallet.UserOperation calldata userOp) external view returns (bytes32);
+    function handleOps(Wallet.UserOperation[] calldata ops, address payable beneficiary) external;
+    function getNonce(address sender, uint192 key) external view returns (uint nonce);
 }
 
 contract WalletTest is Test {
@@ -148,23 +150,13 @@ contract WalletTest is Test {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function createUserOp() internal view returns (Wallet.UserOperation memory userOp) {
+    function createUserOp(uint pK, uint192 key)
+        internal
+        view
+        returns (Wallet.UserOperation memory userOp)
+    {
         userOp.sender = address(w);
-        userOp.nonce = 0;
-        userOp.initCode = bytes('');
-        userOp.callData = bytes('');
-        userOp.callGasLimit = 0;
-        userOp.verificationGasLimit = 0;
-        userOp.preVerificationGas = 0;
-        userOp.maxFeePerGas = 0;
-        userOp.maxPriorityFeePerGas = 0;
-        userOp.paymasterAndData = bytes('');        
-        userOp.signature = aliceSign(IEntryPoint(entryPoint).getUserOpHash(userOp));
-    }
-
-    function createBadUserOp() public view returns (Wallet.UserOperation memory userOp) {
-        userOp.sender = address(w);
-        userOp.nonce = 0;
+        userOp.nonce = IEntryPoint(entryPoint).getNonce(userOp.sender, key);
         userOp.initCode = bytes('');
         userOp.callData = bytes('');
         userOp.callGasLimit = 0;
@@ -173,27 +165,30 @@ contract WalletTest is Test {
         userOp.maxFeePerGas = 0;
         userOp.maxPriorityFeePerGas = 0;
         userOp.paymasterAndData = bytes('');
-        userOp.signature = '';
+        userOp.signature = sign(pK, IEntryPoint(entryPoint).getUserOpHash(userOp));
     }
 
     function testValidateUserOp() public payable {
-        Wallet.UserOperation memory userOp = createUserOp();
+        Wallet.UserOperation memory userOp = createUserOp(aliceKey, 0);
         bytes32 userOpHash = IEntryPoint(entryPoint).getUserOpHash(userOp);
         vm.prank(entryPoint);
+
         uint validationData = w.validateUserOp(userOp, userOpHash, 0);
         assertEq(validationData, 0);
     }
 
     function testBadValidateUserOp() public payable {
-        Wallet.UserOperation memory userOp = createBadUserOp();
+        Wallet.UserOperation memory userOp = createUserOp(bobKey, 0);
         bytes32 userOpHash = IEntryPoint(entryPoint).getUserOpHash(userOp);
         vm.prank(entryPoint);
         uint validationData = w.validateUserOp(userOp, userOpHash, 0);
         assertEq(validationData, 1);
     }
 
-    function aliceSign(bytes32 hash) internal view returns (bytes memory sig) {
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, hash);
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    function sign(uint pK, bytes32 hash) internal pure returns (bytes memory sig) {
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pK, hash);
         sig = abi.encodePacked(r, s, v);
     }
 }
