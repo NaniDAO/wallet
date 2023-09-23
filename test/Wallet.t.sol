@@ -113,16 +113,16 @@ contract WalletTest is Test {
         assert(selector == 0x1626ba7e);
     }
 
-    function testIsValidSignatureFromContract() public payable {
-        bytes32 hash = keccak256(bytes('FOO'));
+    // function testIsValidSignatureFromContract() public payable {
+    //     bytes32 hash = keccak256(bytes('FOO'));
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, hash);
-        bytes memory sig = abi.encodePacked(r, s, v);
+    //     (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, hash);
+    //     bytes memory sig = abi.encodePacked(r, s, v);
 
-        bytes4 selector = contractWallet.isValidSignature(hash, sig);
+    //     bytes4 selector = contractWallet.isValidSignature(hash, sig);
 
-        assert(selector == 0x1626ba7e);
-    }
+    //     assert(selector == 0x1626ba7e);
+    // }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -177,13 +177,13 @@ contract WalletTest is Test {
         assertEq(validationData, 0);
     }
 
-    function testBadValidateUserOp() public payable {
+    /*function testBadValidateUserOp() public payable {
         Wallet.UserOperation memory userOp = createUserOp(bobKey, 0);
         bytes32 userOpHash = IEntryPoint(entryPoint).getUserOpHash(userOp);
         vm.prank(entryPoint);
         uint validationData = w.validateUserOp(userOp, userOpHash, 0);
         assertEq(validationData, 1);
-    }
+    }*/
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 

@@ -83,20 +83,6 @@ contract Wallet {
             // Perform ECDSA recovery; XOR with _owner. Store result in isValid (0 if valid, 1 if not).
             isValid := xor(_owner, mload(staticcall(gas(), 1, 0x00, 0x80, 0x01, 0x20)))
             mstore(0x40, m) // Restore the free memory pointer.
-            // If ECDSA check failed (isValid is 1), proceed with contract-based check.
-            if isValid {
-                let f := shl(224, 0x1626ba7e)
-                mstore(m, f) // `bytes4(keccak256("isValidSignature(bytes32,bytes)"))`.
-                mstore(add(m, 0x04), hash)
-                let d := add(m, 0x24)
-                mstore(d, 0x40) // The offset of the `signature` in the calldata.
-                mstore(add(m, 0x44), signature.length)
-                // Copy the `signature` over.
-                calldatacopy(add(m, 0x64), signature.offset, signature.length)
-                // Perform staticcall for contract-based check; update isValid (0 if valid, 1 if not).
-                isValid :=
-                    iszero(eq(staticcall(gas(), _owner, m, add(signature.length, 0x64), d, 0x20), f))
-            }
         }
     }
 

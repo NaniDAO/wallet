@@ -1,30 +1,23 @@
-# The Default Profile
 [profile.default]
-solc_version = "0.8.21"
-evm_version = "paris" # Shanghai will be tested in the CI.
-auto_detect_solc = false
+via_ir = true
+solc_version = '0.8.21'
+
 optimizer = true
-optimizer_runs = 9999999
-gas_limit = 100_000_000 # ETH is 30M, but we use a higher value.
+optimizer_runs = 9_999_999
 
 remappings = [
-  "@forge=lib/forge-std/src/",
-  "@solady=lib/solady/",
-  "@aa=lib/account-abstraction/contracts/",
-  "@openzeppelin=lib/openzeppelin-contracts/"
+  '@solady=lib/solady/',
+  '@forge=lib/forge-std/src/'
 ]
 
 [fmt]
-line_length = 100 # While we allow up to 120, we lint at 100 for readability.
-quote_style = 'single'
+line_length = 100 
 int_types = 'short'
-
-[profile.via-ir]
-via_ir = true
+quote_style = 'single'
 
 [rpc_endpoints]
-main = "https://rpc.ankr.com/eth"
-base = "https://rpc.ankr.com/base"
-poly = "https://rpc.ankr.com/polygon"
-opti = "https://rpc.ankr.com/optimism"
-arbi = "https://rpc.ankr.com/arbitrum"
+main = 'https://rpc.ankr.com/eth'
+base = 'https://rpc.ankr.com/base'
+poly = 'https://rpc.ankr.com/polygon'
+opti = 'https://rpc.ankr.com/optimism'
+arbi = 'https://rpc.ankr.com/arbitrum'
