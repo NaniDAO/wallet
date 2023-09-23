@@ -74,25 +74,14 @@ contract Wallet {
     {
         bytes32 _owner = owner;
         assembly ("memory-safe") {
-            let m := mload(0x40)
+            let m := mload(0x40)  // Store the free memory pointer
             if eq(signature.length, 65) {
                 mstore(0x00, hash)
-                mstore(0x20, byte(0, calldataload(add(signature.offset, 0x40)))) // `v`.
-                calldatacopy(0x40, signature.offset, 0x40) // `r`, `s`.
-                // forgefmt: disable-next-item
-                isValid := xor(_owner, mload(
-                    staticcall(
-                        gas(), // Amount of gas left for the transaction.
-                        1, // Address of `ecrecover`.
-                        0x00, // Start of input.
-                        0x80, // Size of input.
-                        0x01, // Start of output.
-                        0x20 // Size of output.
-                    ))
-                )
+                mstore(0x20, byte(0, calldataload(add(signature.offset, 0x40))))  // `v`
+                calldatacopy(0x40, signature.offset, 0x40)  // `r`, `s`
+                isValid := xor(_owner, mload(staticcall(gas(), 1, 0x00, 0x80, 0x01, 0x20)))
             }
-            mstore(0x60, 0x00) // Restore the zero slot.
-            mstore(0x40, m) // Restore the free memory pointer.
+            mstore(0x40, m)  // Restore the free memory pointer
             if isValid {
                 let f := shl(224, 0x1626ba7e)
                 mstore(m, f) // `bytes4(keccak256("isValidSignature(bytes32,bytes)"))`.
@@ -102,20 +91,7 @@ contract Wallet {
                 mstore(add(m, 0x44), signature.length)
                 // Copy the `signature` over.
                 calldatacopy(add(m, 0x64), signature.offset, signature.length)
-                isValid :=
-                    iszero(
-                        eq(
-                            staticcall(
-                                gas(), // Remaining gas.
-                                _owner, // The `owner` address.
-                                m, // Offset of calldata in memory.
-                                add(signature.length, 0x64), // Length of calldata in memory.
-                                d, // Offset of returndata.
-                                0x20 // Length of returndata to write.
-                            ),
-                            f
-                        )
-                    )
+                isValid := iszero(eq(staticcall(gas(), _owner, m, add(signature.length, 0x64), d, 0x20), f))
             }
         }
     }
