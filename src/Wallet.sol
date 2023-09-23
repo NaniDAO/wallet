@@ -12,18 +12,18 @@ contract Wallet {
     // Execute Op...
     function execute(bytes32 to, uint val, bytes calldata data, uint op) public payable {
         assembly {
-            if xor(caller(), entryPoint) { revert(0x00, 0x00) }
+            if xor(caller(), entryPoint) { revert(0, 0) }
             let dataMem := mload(data.offset)
             if iszero(op) {
-                let success := call(gas(), to, val, add(dataMem, 0x20), mload(dataMem), gas(), 0x00)
-                returndatacopy(0x00, 0x00, returndatasize())
-                if iszero(success) { revert(0x00, returndatasize()) }
-                return(0x00, returndatasize())
+                let success := call(gas(), to, val, add(dataMem, 32), mload(dataMem), gas(), 0)
+                returndatacopy(0, 0, returndatasize())
+                if iszero(success) { revert(0, returndatasize()) }
+                return(0, returndatasize())
             }
-            let success := delegatecall(gas(), to, add(dataMem, 0x20), mload(dataMem), gas(), 0x00)
-            returndatacopy(0x00, 0x00, returndatasize())
-            if iszero(success) { revert(0x00, returndatasize()) }
-            return(0x00, returndatasize())
+            let success := delegatecall(gas(), to, add(dataMem, 32), mload(dataMem), gas(), 0)
+            returndatacopy(0, 0, returndatasize())
+            if iszero(success) { revert(0, returndatasize()) }
+            return(0, returndatasize())
         }
     }
 
@@ -53,14 +53,14 @@ contract Wallet {
         uint missingAccountFunds
     ) public payable returns (uint validationData) {
         assembly ("memory-safe") {
-            if xor(caller(), entryPoint) { revert(0x00, 0x00) }
+            if xor(caller(), entryPoint) { revert(0, 0) }
         }
 
         validationData = _isValidSignature(userOpHash, userOp.signature);
 
         if (missingAccountFunds != 0) {
             assembly ("memory-safe") {
-                pop(call(gas(), caller(), missingAccountFunds, 0x00, 0x00, 0x00, 0x00))
+                pop(call(gas(), caller(), missingAccountFunds, 0, 0, 0, 0))
             }
         }
     }
@@ -72,17 +72,14 @@ contract Wallet {
         view
         returns (uint isValid)
     {
-        bytes32 _owner = owner;
+        bytes32 o = owner;
         assembly ("memory-safe") {
-            let m := mload(0x40)
-            mstore(0x00, hash) // Store hash at memory slot 0x00.
-            // Extract 'v' from signature and store at memory slot 0x20.
-            mstore(0x20, byte(0, calldataload(add(signature.offset, 0x40))))
-            // Copy 'r' and 's' from signature to memory starting at slot 0x40.
-            calldatacopy(0x40, signature.offset, 0x40)
-            // Perform ECDSA recovery; XOR with _owner. Store result in isValid (0 if valid, 1 if not).
-            isValid := xor(_owner, mload(staticcall(gas(), 1, 0x00, 0x80, 0x01, 0x20)))
-            mstore(0x40, m) // Restore the free memory pointer.
+            let m := mload(64)
+            mstore(0, hash)
+            mstore(32, byte(0, calldataload(add(signature.offset, 64))))
+            calldatacopy(64, signature.offset, 64)
+            isValid := xor(o, mload(staticcall(gas(), 1, 0, 128, 1, 32)))
+            mstore(64, m)
         }
     }
 
@@ -94,18 +91,18 @@ contract Wallet {
             let s := shr(224, calldataload(0))
             // `onERC721Received`.
             if eq(s, 0x150b7a02) {
-                mstore(0x20, s)
-                return(0x3c, 0x20)
+                mstore(32, s)
+                return(60, 32)
             }
             // `onERC1155Received`.
             if eq(s, 0xf23a6e61) {
-                mstore(0x20, s)
-                return(0x3c, 0x20)
+                mstore(32, s)
+                return(60, 32)
             }
             // `onERC1155BatchReceived`.
             if eq(s, 0xbc197c81) {
-                mstore(0x20, s)
-                return(0x3c, 0x20)
+                mstore(32, s)
+                return(60, 32)
             }
         }
     }
