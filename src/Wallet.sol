@@ -74,9 +74,10 @@ contract Wallet {
     {
         bytes32 _owner = owner;
         assembly ("memory-safe") {
+            let m := mload(0x40)
             // Check if signature length is 65 (ECDSA signature length).
             if eq(signature.length, 65) {
-                mstore(0x00, hash)  // Store hash at memory slot 0x00.
+                mstore(0x00, hash) // Store hash at memory slot 0x00.
                 // Extract 'v' from signature and store at memory slot 0x20.
                 mstore(0x20, byte(0, calldataload(add(signature.offset, 0x40))))
                 // Copy 'r' and 's' from signature to memory starting at slot 0x40.
@@ -84,20 +85,20 @@ contract Wallet {
                 // Perform ECDSA recovery; XOR with _owner. Store result in isValid (0 if valid, 1 if not).
                 isValid := xor(_owner, mload(staticcall(gas(), 1, 0x00, 0x80, 0x01, 0x20)))
             }
+            mstore(0x40, m) // Restore the free memory pointer.
             // If ECDSA check failed (isValid is 1), proceed with contract-based check.
             if isValid {
-                // Store function selector for "isValidSignature" at memory slot 0x40.
-                mstore(0x40, shl(224, 0x1626ba7e))
-                // Store hash adjacent to function selector at 0x44 for contract signature check.
-                mstore(add(0x40, 0x04), hash)
-                // Store fixed offset (0x40) to the signature in calldata for contract check.
-                mstore(add(0x40, 0x24), 0x40)
-                // Store the length of the signature.
-                mstore(add(0x40, 0x44), signature.length)
-                // Copy signature to memory starting at 0x64 for contract-based check.
-                calldatacopy(add(0x40, 0x64), signature.offset, signature.length)
+                let f := shl(224, 0x1626ba7e)
+                mstore(m, f) // `bytes4(keccak256("isValidSignature(bytes32,bytes)"))`.
+                mstore(add(m, 0x04), hash)
+                let d := add(m, 0x24)
+                mstore(d, 0x40) // The offset of the `signature` in the calldata.
+                mstore(add(m, 0x44), signature.length)
+                // Copy the `signature` over.
+                calldatacopy(add(m, 0x64), signature.offset, signature.length)
                 // Perform staticcall for contract-based check; update isValid (0 if valid, 1 if not).
-                isValid := iszero(eq(staticcall(gas(), _owner, 0x40, add(signature.length, 0x64), add(0x40, 0x24), 0x20), shl(224, 0x1626ba7e)))
+                isValid :=
+                    iszero(eq(staticcall(gas(), _owner, m, add(signature.length, 0x64), d, 0x20), f))
             }
         }
     }
