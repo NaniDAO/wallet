@@ -65,8 +65,6 @@ contract Wallet {
         }
     }
 
-    // (solady/blob/main/src/utils/ECDSA.sol)
-    // Edited to return uint for eip-4337 validation.
     function _isValidSignature(bytes32 hash, bytes calldata signature)
         internal
         view
@@ -89,17 +87,14 @@ contract Wallet {
     fallback() external payable {
         assembly ("memory-safe") {
             let s := shr(224, calldataload(0))
-            // `onERC721Received`.
             if eq(s, 0x150b7a02) {
                 mstore(32, s)
                 return(60, 32)
             }
-            // `onERC1155Received`.
             if eq(s, 0xf23a6e61) {
                 mstore(32, s)
                 return(60, 32)
             }
-            // `onERC1155BatchReceived`.
             if eq(s, 0xbc197c81) {
                 mstore(32, s)
                 return(60, 32)
