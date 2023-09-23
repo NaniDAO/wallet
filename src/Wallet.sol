@@ -12,7 +12,7 @@ contract Wallet {
     // Execute Op...
     function execute(bytes32 to, uint val, bytes calldata data, uint op) public payable {
         assembly {
-            if xor(caller(), entryPoint) { revert(0, 0) }
+            if xor(caller(), entryPoint) { revert(0x00, 0x00) }
             let dataMem := mload(data.offset)
             if iszero(op) {
                 let success := call(gas(), to, val, add(dataMem, 0x20), mload(dataMem), gas(), 0x00)
@@ -53,7 +53,7 @@ contract Wallet {
         uint missingAccountFunds
     ) public payable returns (uint validationData) {
         assembly ("memory-safe") {
-            if iszero(eq(caller(), entryPoint)) { revert(0, 0) }
+            if xor(caller(), entryPoint) { revert(0x00, 0x00) }
         }
 
         validationData = _isValidSignature(userOpHash, userOp.signature);
@@ -91,7 +91,7 @@ contract Wallet {
                     ))
                 )
             }
-            mstore(0x60, 0) // Restore the zero slot.
+            mstore(0x60, 0x00) // Restore the zero slot.
             mstore(0x40, m) // Restore the free memory pointer.
             if isValid {
                 let f := shl(224, 0x1626ba7e)
