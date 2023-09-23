@@ -106,17 +106,17 @@ contract Wallet {
     fallback() external payable {
         assembly ("memory-safe") {
             let s := shr(224, calldataload(0))
-            // `bytes4(keccak256('onERC721Received(address,address,uint,bytes)'))`.
+            // `onERC721Received`.
             if eq(s, 0x150b7a02) {
                 mstore(0x20, s)
                 return(0x3c, 0x20)
             }
-            // `bytes4(keccak256('onERC1155Received(address,address,uint,uint,bytes))')`.
+            // `onERC1155Received`.
             if eq(s, 0xf23a6e61) {
                 mstore(0x20, s)
                 return(0x3c, 0x20)
             }
-            // `bytes4(keccak256('onERC1155BatchReceived(address,address,uint[],uint[],bytes))'`.
+            // `onERC1155BatchReceived`.
             if eq(s, 0xbc197c81) {
                 mstore(0x20, s)
                 return(0x3c, 0x20)
