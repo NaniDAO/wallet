@@ -81,7 +81,6 @@ contract Wallet {
                 calldatacopy(0x40, signature.offset, 0x40)  // `r`, `s`
                 isValid := xor(_owner, mload(staticcall(gas(), 1, 0x00, 0x80, 0x01, 0x20)))
             }
-            mstore(0x40, m)  // Restore the free memory pointer
             if isValid {
                 let f := shl(224, 0x1626ba7e)
                 mstore(m, f) // `bytes4(keccak256("isValidSignature(bytes32,bytes)"))`.
