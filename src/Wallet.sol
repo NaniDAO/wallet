@@ -75,16 +75,13 @@ contract Wallet {
         bytes32 _owner = owner;
         assembly ("memory-safe") {
             let m := mload(0x40)
-            // Check if signature length is 65 (ECDSA signature length).
-            if eq(signature.length, 65) {
-                mstore(0x00, hash) // Store hash at memory slot 0x00.
-                // Extract 'v' from signature and store at memory slot 0x20.
-                mstore(0x20, byte(0, calldataload(add(signature.offset, 0x40))))
-                // Copy 'r' and 's' from signature to memory starting at slot 0x40.
-                calldatacopy(0x40, signature.offset, 0x40)
-                // Perform ECDSA recovery; XOR with _owner. Store result in isValid (0 if valid, 1 if not).
-                isValid := xor(_owner, mload(staticcall(gas(), 1, 0x00, 0x80, 0x01, 0x20)))
-            }
+            mstore(0x00, hash) // Store hash at memory slot 0x00.
+            // Extract 'v' from signature and store at memory slot 0x20.
+            mstore(0x20, byte(0, calldataload(add(signature.offset, 0x40))))
+            // Copy 'r' and 's' from signature to memory starting at slot 0x40.
+            calldatacopy(0x40, signature.offset, 0x40)
+            // Perform ECDSA recovery; XOR with _owner. Store result in isValid (0 if valid, 1 if not).
+            isValid := xor(_owner, mload(staticcall(gas(), 1, 0x00, 0x80, 0x01, 0x20)))
             mstore(0x40, m) // Restore the free memory pointer.
             // If ECDSA check failed (isValid is 1), proceed with contract-based check.
             if isValid {
