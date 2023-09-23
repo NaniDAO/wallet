@@ -74,7 +74,6 @@ contract Wallet {
     {
         bytes32 _owner = owner;
         assembly ("memory-safe") {
-            let m := mload(0x40)  // Store the free memory pointer
             if eq(signature.length, 65) {
                 mstore(0x00, hash)
                 mstore(0x20, byte(0, calldataload(add(signature.offset, 0x40))))  // `v`
