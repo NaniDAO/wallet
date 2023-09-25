@@ -95,7 +95,9 @@ contract WalletTest is Test {
     function testExecuteETHTransferResult() public payable {
         assertEq(bobAddr.balance, 0 ether);
         vm.prank(entryPoint);
-        w.execute(0x2456678880000456677d22221d96f2f6bef1202e4ce1ff6dad0c2cb002861d3e, 1 ether, '', 0);
+        w.execute(
+            0x2456678880000456677d22221d96f2f6bef1202e4ce1ff6dad0c2cb002861d3e, 1 ether, '', 0
+        );
         assertEq(bobAddr.balance, 1 ether);
     }
 
