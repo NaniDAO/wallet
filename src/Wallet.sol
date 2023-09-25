@@ -10,19 +10,13 @@ contract Wallet {
     }
 
     // Execute Op...
-    function execute(bytes32 to, uint val, bytes calldata data, uint op) public payable {
+    function execute(bytes32 to, bytes calldata data) public payable {
         bytes32 o = owner;
         assembly {
             if and(xor(caller(), entryPoint), xor(caller(), o)) { revert(0, 0) }
 
             calldatacopy(0, data.offset, data.length)
 
-            if iszero(op) {
-                let success := call(gas(), to, val, 0, data.length, gas(), 0)
-                returndatacopy(0, 0, returndatasize())
-                if iszero(success) { revert(0, returndatasize()) }
-                return(0, returndatasize())
-            }
             let success := delegatecall(gas(), to, 0, data.length, gas(), 0)
             returndatacopy(0, 0, returndatasize())
             if iszero(success) { revert(0, returndatasize()) }
@@ -88,7 +82,7 @@ contract Wallet {
     receive() external payable {}
 
     fallback() external payable {
-        assembly ("memory-safe") {
+        assembly {
             mstore(32, shr(224, calldataload(0)))
             return(60, 32)
         }

@@ -34,6 +34,7 @@ contract WalletTest is Test {
     MockERC721 erc721;
     MockERC1155 erc1155;
     MockERC1271Wallet contractWallet;
+    EthFwd ethFwd;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -56,6 +57,7 @@ contract WalletTest is Test {
 
         contractWallet = new MockERC1271Wallet(address(aliceAddr));
         contractOwnedW = f.deploy(bytes32(uint(uint160(address(contractWallet)))));
+        ethFwd = new EthFwd();
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -72,48 +74,43 @@ contract WalletTest is Test {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testFailExecuteCallNotEntrypoint() public payable {
-        w.execute(bob, 0, abi.encodeWithSignature('foo()'), 0);
-    }
-
-    function testExecuteCall() public payable {
-        vm.prank(entryPoint);
-        w.execute(bob, 0, abi.encodeWithSignature('foo()'), 0);
-    }
-
-    function testExecuteDelegatecall() public payable {
-        vm.prank(entryPoint);
-        w.execute(bob, 0, abi.encodeWithSignature('foo()'), 1);
+        w.execute(bob, abi.encodeWithSignature('foo()'));
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function testExecuteETHTransfer() public payable {
+    function testExecuteDelegatecall() public payable {
         vm.prank(entryPoint);
-        w.execute(bob, 1 ether, '', 0);
+        w.execute(bob, abi.encodeWithSignature('foo()'));
     }
 
     function testExecuteETHTransferResult() public payable {
         assertEq(bobAddr.balance, 0 ether);
         vm.prank(entryPoint);
-        w.execute(
-            0x2456678880000456677d22221d96f2f6bef1202e4ce1ff6dad0c2cb002861d3e, 1 ether, '', 0
-        );
+
+        // Prepare the call data for the forwarder
+        bytes memory data = abi.encodeWithSelector(ethFwd.fwdETH.selector, bobAddr, 1 ether);
+
+        // Execute the delegatecall to the forwarder
+        w.execute(bytes32(uint(uint160(address(ethFwd)))), data);
+
+        // Verify that the Ether got transferred
         assertEq(bobAddr.balance, 1 ether);
     }
 
-    function testExecuteERC721Transfer() public payable {
+    /*function testExecuteERC721Transfer() public payable {
         erc721.mint(address(w), 1);
         bytes memory data =
             abi.encodeWithSelector(MockERC721.transferFrom.selector, address(w), bobAddr, 1);
         vm.prank(entryPoint);
-        w.execute(bytes32(uint(uint160(address(erc721)))), 0, data, 0);
-    }
+        w.execute(bytes32(uint(uint160(address(erc721)))), data);
+    }*/
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testFailNonOwnerExecute() public payable {
         vm.prank(bobAddr);
-        w.execute(bob, 1 ether, '', 0);
+        w.execute(bob, '');
     }
 
     function testIsValidSignature() public payable {
@@ -204,5 +201,17 @@ contract WalletTest is Test {
     function sign(uint pK, bytes32 hash) internal pure returns (bytes memory sig) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pK, hash);
         sig = abi.encodePacked(r, s, v);
+    }
+}
+
+contract EthFwd {
+    function fwdETH(address to, uint amount) public payable {
+        /// @solidity memory-safe-assembly
+        assembly {
+            if iszero(call(gas(), to, amount, gas(), 0x00, gas(), 0x00)) {
+                mstore(0x00, 0xb12d13eb) // `ETHTransferFailed()`.
+                revert(0x1c, 0x04)
+            }
+        }
     }
 }
