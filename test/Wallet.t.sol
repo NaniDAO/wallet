@@ -71,6 +71,10 @@ contract WalletTest is Test {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    function testFailExecuteCallNotEntrypoint() public payable {
+        w.execute(bob, 0, abi.encodeWithSignature('foo()'), 0);
+    }
+
     function testExecuteCall() public payable {
         vm.prank(entryPoint);
         w.execute(bob, 0, abi.encodeWithSignature('foo()'), 0);
@@ -91,8 +95,16 @@ contract WalletTest is Test {
     function testExecuteETHTransferResult() public payable {
         assertEq(bobAddr.balance, 0 ether);
         vm.prank(entryPoint);
-        w.execute(bob, 1 ether, '', 0);
+        w.execute(0x2456678880000456677d22221d96f2f6bef1202e4ce1ff6dad0c2cb002861d3e, 1 ether, '', 0);
         assertEq(bobAddr.balance, 1 ether);
+    }
+
+    function testExecuteERC721Transfer() public payable {
+        erc721.mint(address(w), 1);
+        bytes memory data =
+            abi.encodeWithSelector(MockERC721.transferFrom.selector, address(w), bobAddr, 1);
+        vm.prank(entryPoint);
+        w.execute(bytes32(uint(uint160(address(erc721)))), 0, data, 0);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////

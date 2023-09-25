@@ -13,14 +13,17 @@ contract Wallet {
     function execute(bytes32 to, uint val, bytes calldata data, uint op) public payable {
         assembly {
             if xor(caller(), entryPoint) { revert(0, 0) }
-            let dataMem := mload(data.offset)
+
+            let dataLength := sub(calldatasize(), 0x60)
+            calldatacopy(0x00, data.offset, dataLength)
+
             if iszero(op) {
-                let success := call(gas(), to, val, add(dataMem, 32), mload(dataMem), gas(), 0)
+                let success := call(gas(), to, val, 0x00, dataLength, gas(), 0)
                 returndatacopy(0, 0, returndatasize())
                 if iszero(success) { revert(0, returndatasize()) }
                 return(0, returndatasize())
             }
-            let success := delegatecall(gas(), to, add(dataMem, 32), mload(dataMem), gas(), 0)
+            let success := delegatecall(gas(), to, 0x00, dataLength, gas(), 0)
             returndatacopy(0, 0, returndatasize())
             if iszero(success) { revert(0, returndatasize()) }
             return(0, returndatasize())
