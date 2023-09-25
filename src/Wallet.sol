@@ -14,15 +14,15 @@ contract Wallet {
         assembly {
             if xor(caller(), entryPoint) { revert(0, 0) }
 
-            calldatacopy(0x00, data.offset, data.length)
+            calldatacopy(0, data.offset, data.length)
 
             if iszero(op) {
-                let success := call(gas(), to, val, 0x00, data.length, gas(), 0)
+                let success := call(gas(), to, val, 0, data.length, gas(), 0)
                 returndatacopy(0, 0, returndatasize())
                 if iszero(success) { revert(0, returndatasize()) }
                 return(0, returndatasize())
             }
-            let success := delegatecall(gas(), to, 0x00, data.length, gas(), 0)
+            let success := delegatecall(gas(), to, 0, data.length, gas(), 0)
             returndatacopy(0, 0, returndatasize())
             if iszero(success) { revert(0, returndatasize()) }
             return(0, returndatasize())
