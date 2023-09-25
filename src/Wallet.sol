@@ -88,11 +88,8 @@ contract Wallet {
 
     fallback() external payable {
         assembly ("memory-safe") {
-            let s := shr(224, calldataload(0))
-            if xor(s, 0x00) {
-                mstore(32, s)
-                return(60, 32)
-            }
+            mstore(32, shr(224, calldataload(0)))
+            return(60, 32)
         }
     }
 }
