@@ -40,7 +40,7 @@ contract Wallet {
 
     // eip-4337...
     struct UserOperation {
-        address a;
+        address sender;
         uint nonce;
         bytes initCode;
         bytes callData;
