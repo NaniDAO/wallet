@@ -64,7 +64,7 @@ contract Wallet {
             if xor(caller(), entryPoint) { revert(0, 0) }
             let m := mload(64)
             mstore(0, userOpHash)
-            mstore(32, byte(0, calldataload(add(sig.offset, 64))))
+            mstore(32, 27) 
             calldatacopy(64, sig.offset, 64)
             validationData := xor(o, mload(staticcall(gas(), 1, 0, 128, 1, 32)))
             mstore(64, m)
