@@ -123,12 +123,17 @@ contract WalletTest is Test {
     }
 
     function testIsValidSignature() public payable {
-        bytes32 hash = keccak256(bytes('FOO'));
-
+        bytes32 hash = keccak256(abi.encodePacked('FOO'));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, hash);
         bytes memory sig = abi.encodePacked(r, s, v);
+        // ABI encode hash and sig as expected by isValidSignature.
+        bytes memory data = abi.encodeWithSelector(0x1626ba7e, hash, sig);
+        (, bytes memory ret) = address(w).staticcall(data);
 
-        bytes4 selector = w.isValidSignature(hash, sig);
+        bytes4 selector;
+        assembly {
+            selector := mload(add(ret, 0x20))
+        }
 
         assert(selector == 0x1626ba7e);
     }

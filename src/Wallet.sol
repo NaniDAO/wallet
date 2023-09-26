@@ -22,17 +22,19 @@ contract Wallet {
     }
 
     // eip-1271...
-    function isValidSignature(bytes32 hash, bytes calldata sig) public view returns (bytes4) {
+    function isValidSignature(bytes32 hash, bytes calldata sig) public view {
         bytes32 o = owner;
         assembly {
             let m := mload(64)
             mstore(0, hash)
             mstore(32, byte(0, calldataload(add(sig.offset, 64))))
             calldatacopy(64, sig.offset, 64)
-            let isValid := eq(o, mload(staticcall(gas(), 1, 0, 128, 1, 32)))
+            if eq(o, mload(staticcall(gas(), 1, 0, 128, 1, 32))) {
+                mstore(64, m)
+                mstore(32, 0x1626ba7e)
+                return(60, 32)
+            }
             mstore(64, m)
-            mstore(32, shr(224, calldataload(0)))
-            if isValid { return(60, 32) }
         }
     }
 
