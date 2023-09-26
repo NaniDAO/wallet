@@ -11,9 +11,8 @@ contract Wallet {
 
     // Execute Op...
     function execute(bytes32 to, bytes calldata data) public payable {
-        bytes32 o = owner;
         assembly {
-            if and(xor(caller(), entryPoint), xor(caller(), o)) { revert(0, 0) }
+            if xor(caller(), entryPoint) { revert(0, 0) }
             calldatacopy(0, data.offset, data.length)
             let success := delegatecall(gas(), to, 0, data.length, gas(), 0)
             returndatacopy(0, 0, returndatasize())
