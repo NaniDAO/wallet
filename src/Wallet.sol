@@ -14,7 +14,7 @@ contract Wallet {
         assembly {
             if xor(caller(), entryPoint) { revert(0, 0) }
             calldatacopy(0, data.offset, data.length)
-            let success := delegatecall(gas(), to, 0, data.length, gas(), 0)
+            let success := delegatecall(gas(), to, 0, data.length, 0, 0)
             returndatacopy(0, 0, returndatasize())
             if iszero(success) { revert(0, returndatasize()) }
             return(0, returndatasize())
@@ -40,7 +40,7 @@ contract Wallet {
 
     // eip-4337...
     struct UserOperation {
-        address sender;
+        address a;
         uint nonce;
         bytes initCode;
         bytes callData;
@@ -56,13 +56,12 @@ contract Wallet {
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash,
-        uint missingAccountFunds
+        uint // Prefunded.
     ) public payable returns (uint validationData) {
         bytes calldata sig = userOp.signature;
         bytes32 o = owner;
         assembly ("memory-safe") {
             if xor(caller(), entryPoint) { revert(0, 0) }
-            if missingAccountFunds { pop(call(gas(), caller(), missingAccountFunds, 0, 0, 0, 0)) }
             let m := mload(64)
             mstore(0, userOpHash)
             mstore(32, byte(0, calldataload(add(sig.offset, 64))))
