@@ -22,7 +22,7 @@ contract Wallet {
     }
 
     // eip-1271...
-    function isValidSignature(bytes32 hash, bytes calldata sig) public view {
+    function isValidSignature(bytes32 hash, bytes calldata sig) public payable {
         bytes32 o = owner;
         assembly {
             let m := mload(64)
