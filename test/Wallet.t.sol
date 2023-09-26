@@ -6,76 +6,68 @@ import '@forge/Test.sol';
 import '../src/Wallet.sol';
 import '../src/WalletFactory.sol';
 
-import '@forge/Test.sol';
-
 import {MockERC20} from '@solady/test/utils/mocks/MockERC20.sol';
 import {MockERC721} from '@solady/test/utils/mocks/MockERC721.sol';
 import {MockERC1155} from '@solady/test/utils/mocks/MockERC1155.sol';
 import {MockERC1271Wallet} from '@solady/test/utils/mocks/MockERC1271Wallet.sol';
 
-interface IEntryPoint {
-    function getUserOpHash(Wallet.UserOperation calldata userOp) external view returns (bytes32);
-    function handleOps(Wallet.UserOperation[] calldata ops, address payable beneficiary) external;
-    function getNonce(address sender, uint192 key) external view returns (uint nonce);
-}
-
 contract WalletTest is Test {
-    address aliceAddr;
-    bytes32 alice;
+    address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+
+    address alice;
+    bytes32 aliceHash;
     uint aliceKey;
 
-    address bobAddr;
-    bytes32 bob;
+    address bob;
+    bytes32 bobHash;
     uint bobKey;
 
-    address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+    MockERC20 erc20;
+    bytes32 erc20Hash;
+    MockERC721 erc721;
+    bytes32 erc721Hash;
+    MockERC1155 erc1155;
+    bytes32 erc1155Hash;
 
     Wallet w;
     Wallet contractOwnedW;
-
-    address erc20;
-    bytes32 erc20Hash;
-
-    MockERC721 erc721;
-    MockERC1155 erc1155;
     MockERC1271Wallet contractWallet;
-
-    EthFwd ethFwd;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function setUp() public payable {
-        // Create Ethereum fork.
-        vm.createSelectFork(vm.rpcUrl('main'));
+        vm.createSelectFork(vm.rpcUrl('main')); // Eth fork.
 
-        (aliceAddr, aliceKey) = makeAddrAndKey('alice');
-        (bobAddr, bobKey) = makeAddrAndKey('bob');
+        (alice, aliceKey) = makeAddrAndKey('alice');
+        (bob, bobKey) = makeAddrAndKey('bob');
+
+        aliceHash = bytes32(uint(uint160(alice)));
+        bobHash = bytes32(uint(uint160(bob)));
 
         WalletFactory f = new WalletFactory();
-        w = f.deploy(alice = bytes32(uint(uint160(aliceAddr))));
-
-        bob = bytes32(uint(uint160(bobAddr)));
+        w = f.deploy(aliceHash);
 
         payable(address(w)).transfer(100 ether);
 
-        erc20 = address(new MockERC20("TEST", "TEST", 18));
-        erc20Hash = bytes32(uint(uint160(erc20)));
+        erc20 = new MockERC20("Test", "TEST", 18);
+        erc20Hash = bytes32(uint(uint160(address(erc20))));
         erc721 = new MockERC721();
+        erc721Hash = bytes32(uint(uint160(address(erc721))));
         erc1155 = new MockERC1155();
+        erc1155Hash = bytes32(uint(uint160(address(erc1155))));
 
-        MockERC20(erc20).mint(bobAddr, 1000 ether);
-        MockERC20(erc20).mint(address(w), 10000 ether);
+        MockERC20(erc20).mint(bob, 100 ether); // Warm.
+        MockERC20(erc20).mint(address(w), 1000 ether);
 
-        contractWallet = new MockERC1271Wallet(address(aliceAddr));
+        erc721.mint(address(w), 1);
+        erc721.mint(alice, 2);
+        erc1155.mint(address(w), 1, 1, '');
+
+        contractWallet = new MockERC1271Wallet(alice);
         contractOwnedW = f.deploy(bytes32(uint(uint160(address(contractWallet)))));
-        ethFwd = new EthFwd();
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    function testInitialBalance() public payable {
-        assertEq(address(w).balance, 100 ether);
-    }
 
     function testReceiveETH() public payable {
         payable(address(w)).transfer(100 ether);
@@ -84,73 +76,99 @@ contract WalletTest is Test {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function testFailExecuteCallNotEntrypoint() public payable {
-        w.execute(bob, abi.encodeWithSignature('foo()'));
+    function testExecuteAsOwner() public payable {
+        vm.prank(alice);
+        w.execute(bobHash, 0, abi.encodeWithSignature('foo()'), 0);
+    }
+
+    function testExecuteAsEntryPoint() public payable {
+        vm.prank(entryPoint);
+        w.execute(bobHash, 0, abi.encodeWithSignature('foo()'), 0);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function testFailExecuteAsNotEntrypointOrOwner() public payable {
+        w.execute(bobHash, 0, abi.encodeWithSignature('foo()'), 0);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testExecuteDelegatecall() public payable {
         vm.prank(entryPoint);
-        w.execute(bob, abi.encodeWithSignature('foo()'));
+        w.execute(bobHash, 0, abi.encodeWithSignature('foo()'), 1);
     }
-
-    function testExecuteETHTransfer() public payable {
-        vm.prank(entryPoint);
-        // Execute the delegatecall to the forwarder
-        w.execute(
-            bytes32(uint(uint160(address(ethFwd)))),
-            abi.encodeWithSelector(ethFwd.fwdETH.selector, bobAddr, 1 ether)
-        );
-    }
-
-    function testExecuteETHTransferResult() public payable {
-        assertEq(bobAddr.balance, 0 ether);
-        vm.prank(entryPoint);
-
-        // Prepare the call data for the forwarder
-        bytes memory data = abi.encodeWithSelector(ethFwd.fwdETH.selector, bobAddr, 1 ether);
-
-        // Execute the delegatecall to the forwarder
-        w.execute(bytes32(uint(uint160(address(ethFwd)))), data);
-
-        // Verify that the Ether got transferred
-        assertEq(bobAddr.balance, 1 ether);
-    }
-
-    function testExecuteERC20Transfer() public payable {
-        vm.prank(entryPoint);
-        // Execute the delegatecall to the ERC20
-        w.execute(
-            erc20Hash,
-            abi.encodeWithSelector(MockERC20.transfer.selector, bobAddr, 0) // of tokens.
-        );
-    }
-
-    /*function testExecuteERC721Transfer() public payable {
-        erc721.mint(address(w), 1);
-        bytes memory data =
-            abi.encodeWithSelector(MockERC721.transferFrom.selector, address(w), bobAddr, 1);
-        vm.prank(entryPoint);
-        w.execute(bytes32(uint(uint160(address(erc721)))), data);
-    }*/
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function testFailNonOwnerExecute() public payable {
-        vm.prank(bobAddr);
-        w.execute(bob, '');
+    function testExecuteETHTransfer() public payable {
+        vm.prank(entryPoint);
+        w.execute(bobHash, 1 ether, '', 0);
     }
 
+    function testExecuteETHTransferAndCheckResult() public payable {
+        assertEq(bob.balance, 0 ether);
+        vm.prank(entryPoint);
+        w.execute(bobHash, 1 ether, '', 0);
+        assertEq(bob.balance, 1 ether);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function testExecuteERC20Transfer() public payable {
+        vm.prank(entryPoint);
+        w.execute(
+            erc20Hash,
+            0,
+            abi.encodeWithSelector(MockERC20.transfer.selector, alice, 100 ether), // of tokens.
+            0
+        );
+    }
+
+    function testExecuteERC20TransferWarm() public payable {
+        vm.prank(entryPoint);
+        w.execute(
+            erc20Hash,
+            0,
+            abi.encodeWithSelector(MockERC20.transfer.selector, bob, 100 ether), // of tokens.
+            0
+        );
+    }
+
+    function testExecuteERC20TransferAndCheckResult() public payable {
+        assertEq(erc20.balanceOf(bob), 100 ether);
+        vm.prank(entryPoint);
+        w.execute(
+            erc20Hash,
+            0,
+            abi.encodeWithSelector(MockERC20.transfer.selector, bob, 100 ether), // of tokens.
+            0
+        );
+        assertEq(erc20.balanceOf(bob), 200 ether);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function testExecuteERC721Transfer() public payable {
+        vm.prank(entryPoint);
+        w.execute(
+            erc721Hash,
+            0,
+            abi.encodeWithSelector(MockERC721.transferFrom.selector, address(w), bob, 1), // id of token.
+            0
+        );
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     function testIsValidSignature() public payable {
-        bytes32 hash = keccak256(abi.encodePacked('FOO'));
+        bytes32 hash = keccak256(abi.encodePacked('foo()'));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, hash);
-        bytes memory sig = abi.encodePacked(r, s, v);
-        // ABI encode hash and sig as expected by isValidSignature.
-        bytes memory data = abi.encodeWithSelector(0x1626ba7e, hash, sig);
+        // ABI encode hash and sig as expected by isValidSignature() / eip-1271
+        bytes memory data = abi.encodeWithSelector(0x1626ba7e, hash, abi.encodePacked(r, s, v));
         (, bytes memory ret) = address(w).staticcall(data);
 
-        bytes4 selector;
+        bytes4 selector; // Slice selector return.
         assembly {
             selector := mload(add(ret, 0x20))
         }
@@ -172,25 +190,24 @@ contract WalletTest is Test {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testOnERC721Received() public payable {
-        erc721.mint(aliceAddr, 1);
-        vm.prank(aliceAddr);
-        erc721.safeTransferFrom(aliceAddr, address(w), 1);
+        vm.prank(alice);
+        erc721.safeTransferFrom(alice, address(w), 2);
     }
 
     function testOnERC1155Received() public payable {
-        erc1155.mint(aliceAddr, 1, 1, '');
-        vm.prank(aliceAddr);
-        erc1155.safeTransferFrom(aliceAddr, address(w), 1, 1, '');
+        erc1155.mint(alice, 1, 1, '');
+        vm.prank(alice);
+        erc1155.safeTransferFrom(alice, address(w), 1, 1, '');
     }
 
     function testOnERC1155BatchReceived() public payable {
-        erc1155.mint(aliceAddr, 1, 1, '');
-        vm.prank(aliceAddr);
+        erc1155.mint(alice, 1, 1, '');
+        vm.prank(alice);
         uint[] memory ids = new uint256[](1);
         ids[0] = 1;
         uint[] memory amts = new uint256[](1);
         amts[0] = 1;
-        erc1155.safeBatchTransferFrom(aliceAddr, address(w), ids, amts, '');
+        erc1155.safeBatchTransferFrom(alice, address(w), ids, amts, '');
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -202,50 +219,43 @@ contract WalletTest is Test {
     {
         userOp.sender = address(w);
         userOp.nonce = IEntryPoint(entryPoint).getNonce(userOp.sender, key);
-        userOp.initCode = bytes('');
-        userOp.callData = bytes('');
-        userOp.callGasLimit = 0;
-        userOp.verificationGasLimit = 0;
-        userOp.preVerificationGas = 0;
-        userOp.maxFeePerGas = 0;
-        userOp.maxPriorityFeePerGas = 0;
-        userOp.paymasterAndData = bytes('');
+        userOp.initCode;
+        userOp.callData;
+        userOp.callGasLimit;
+        userOp.verificationGasLimit;
+        userOp.preVerificationGas;
+        userOp.maxFeePerGas;
+        userOp.maxPriorityFeePerGas;
+        userOp.paymasterAndData;
         userOp.signature = sign(pK, IEntryPoint(entryPoint).getUserOpHash(userOp));
     }
 
     function testValidateUserOp() public payable {
         Wallet.UserOperation memory userOp = createUserOp(aliceKey, 0);
         bytes32 userOpHash = IEntryPoint(entryPoint).getUserOpHash(userOp);
-        vm.prank(entryPoint);
 
-        uint validationData = w.validateUserOp(userOp, userOpHash, 0);
-        assertEq(validationData, 0);
+        vm.prank(entryPoint);
+        assertEq(w.validateUserOp(userOp, userOpHash, 0), 0); // Return `0` for valid.
     }
 
     /*function testBadValidateUserOp() public payable {
         Wallet.UserOperation memory userOp = createUserOp(bobKey, 0);
         bytes32 userOpHash = IEntryPoint(entryPoint).getUserOpHash(userOp);
+
         vm.prank(entryPoint);
-        uint validationData = w.validateUserOp(userOp, userOpHash, 0);
-        assertEq(validationData, 1);
+        assertEq(w.validateUserOp(userOp, userOpHash, 0), 1); // Return `1` for fail.
     }*/
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function sign(uint pK, bytes32 hash) internal pure returns (bytes memory sig) {
+    function sign(uint pK, bytes32 hash) internal pure returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pK, hash);
-        sig = abi.encodePacked(r, s, v);
+        return abi.encodePacked(r, s, v);
     }
 }
 
-contract EthFwd {
-    function fwdETH(address to, uint amount) public payable {
-        /// @solidity memory-safe-assembly
-        assembly {
-            if iszero(call(gas(), to, amount, gas(), 0x00, gas(), 0x00)) {
-                mstore(0x00, 0xb12d13eb) // `ETHTransferFailed()`.
-                revert(0x1c, 0x04)
-            }
-        }
-    }
+interface IEntryPoint {
+    function getUserOpHash(Wallet.UserOperation calldata userOp) external view returns (bytes32);
+    function handleOps(Wallet.UserOperation[] calldata ops, address payable beneficiary) external;
+    function getNonce(address sender, uint192 key) external view returns (uint nonce);
 }

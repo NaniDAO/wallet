@@ -10,10 +10,17 @@ contract Wallet {
     }
 
     // Execute Op...
-    function execute(bytes32 to, bytes calldata data) public payable {
+    function execute(bytes32 to, uint val, bytes calldata data, uint op) public payable {
+        bytes32 o = owner;
         assembly {
-            if xor(caller(), entryPoint) { revert(0, 0) }
+            if and(xor(caller(), o), xor(caller(), entryPoint)) { revert(0, 0) }
             calldatacopy(0, data.offset, data.length)
+            if iszero(op) {
+                let success := call(gas(), to, val, 0, data.length, 0, 0)
+                returndatacopy(0, 0, returndatasize())
+                if iszero(success) { revert(0, returndatasize()) }
+                return(0, returndatasize())
+            }
             let success := delegatecall(gas(), to, 0, data.length, 0, 0)
             returndatacopy(0, 0, returndatasize())
             if iszero(success) { revert(0, returndatasize()) }
@@ -27,7 +34,7 @@ contract Wallet {
         assembly {
             let m := mload(64)
             mstore(0, hash)
-            mstore(32, 28)
+            mstore(32, 28) // Cursed?
             calldatacopy(64, sig.offset, 64)
             if eq(o, mload(staticcall(gas(), 1, 0, 128, 1, 32))) {
                 mstore(64, m)
@@ -64,7 +71,7 @@ contract Wallet {
             if xor(caller(), entryPoint) { revert(0, 0) }
             let m := mload(64)
             mstore(0, userOpHash)
-            mstore(32, 28)
+            mstore(32, 27) // Cursed?
             calldatacopy(64, sig.offset, 64)
             validationData := xor(o, mload(staticcall(gas(), 1, 0, 128, 1, 32)))
             mstore(64, m)
