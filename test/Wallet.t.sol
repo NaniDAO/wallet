@@ -8,6 +8,7 @@ import '../src/WalletFactory.sol';
 
 import '@forge/Test.sol';
 
+import {MockERC20} from '@solady/test/utils/mocks/MockERC20.sol';
 import {MockERC721} from '@solady/test/utils/mocks/MockERC721.sol';
 import {MockERC1155} from '@solady/test/utils/mocks/MockERC1155.sol';
 import {MockERC1271Wallet} from '@solady/test/utils/mocks/MockERC1271Wallet.sol';
@@ -31,9 +32,14 @@ contract WalletTest is Test {
 
     Wallet w;
     Wallet contractOwnedW;
+
+    address erc20;
+    bytes32 erc20Hash;
+
     MockERC721 erc721;
     MockERC1155 erc1155;
     MockERC1271Wallet contractWallet;
+
     EthFwd ethFwd;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -52,8 +58,13 @@ contract WalletTest is Test {
 
         payable(address(w)).transfer(100 ether);
 
+        erc20 = address(new MockERC20("TEST", "TEST", 18));
+        erc20Hash = bytes32(uint(uint160(erc20)));
         erc721 = new MockERC721();
         erc1155 = new MockERC1155();
+
+        MockERC20(erc20).mint(bobAddr, 1000 ether);
+        MockERC20(erc20).mint(address(w), 10000 ether);
 
         contractWallet = new MockERC1271Wallet(address(aliceAddr));
         contractOwnedW = f.deploy(bytes32(uint(uint160(address(contractWallet)))));
@@ -105,6 +116,15 @@ contract WalletTest is Test {
 
         // Verify that the Ether got transferred
         assertEq(bobAddr.balance, 1 ether);
+    }
+
+    function testExecuteERC20Transfer() public payable {
+        vm.prank(entryPoint);
+        // Execute the delegatecall to the ERC20
+        w.execute(
+            erc20Hash,
+            abi.encodeWithSelector(MockERC20.transfer.selector, bobAddr, 0) // of tokens.
+        );
     }
 
     /*function testExecuteERC721Transfer() public payable {
