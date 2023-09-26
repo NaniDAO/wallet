@@ -2,8 +2,8 @@
 pragma solidity ^0.8.19;
 
 contract Wallet {
-    bytes32 immutable owner;
     address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+    bytes32 immutable owner;
 
     constructor(bytes32 _owner) payable {
         owner = _owner;
@@ -22,8 +22,18 @@ contract Wallet {
     }
 
     // eip-1271...
-    function isValidSignature(bytes32 hash, bytes calldata sig) public view returns (bytes4 y) {
-        if (_isValidSignature(hash, sig) == 0) y = this.isValidSignature.selector;
+    function isValidSignature(bytes32 hash, bytes calldata sig) public view returns (bytes4) {
+        bytes32 o = owner;
+        assembly {
+            let m := mload(64)
+            mstore(0, hash)
+            mstore(32, byte(0, calldataload(add(sig.offset, 64))))
+            calldatacopy(64, sig.offset, 64)
+            let isValid := eq(o, mload(staticcall(gas(), 1, 0, 128, 1, 32)))
+            mstore(64, m)
+            mstore(32, shr(224, calldataload(0)))
+            if isValid { return(60, 32) }
+        }
     }
 
     // eip-4337...
@@ -46,31 +56,16 @@ contract Wallet {
         bytes32 userOpHash,
         uint missingAccountFunds
     ) public payable returns (uint validationData) {
-        assembly ("memory-safe") {
-            if xor(caller(), entryPoint) { revert(0, 0) }
-        }
-
-        validationData = _isValidSignature(userOpHash, userOp.signature);
-
-        if (missingAccountFunds != 0) {
-            assembly ("memory-safe") {
-                pop(call(gas(), caller(), missingAccountFunds, 0, 0, 0, 0))
-            }
-        }
-    }
-
-    function _isValidSignature(bytes32 hash, bytes calldata signature)
-        internal
-        view
-        returns (uint isValid)
-    {
+        bytes calldata sig = userOp.signature;
         bytes32 o = owner;
         assembly ("memory-safe") {
+            if xor(caller(), entryPoint) { revert(0, 0) }
+            if missingAccountFunds { pop(call(gas(), caller(), missingAccountFunds, 0, 0, 0, 0)) }
             let m := mload(64)
-            mstore(0, hash)
-            mstore(32, byte(0, calldataload(add(signature.offset, 64))))
-            calldatacopy(64, signature.offset, 64)
-            isValid := xor(o, mload(staticcall(gas(), 1, 0, 128, 1, 32)))
+            mstore(0, userOpHash)
+            mstore(32, byte(0, calldataload(add(sig.offset, 64))))
+            calldatacopy(64, sig.offset, 64)
+            validationData := xor(o, mload(staticcall(gas(), 1, 0, 128, 1, 32)))
             mstore(64, m)
         }
     }
