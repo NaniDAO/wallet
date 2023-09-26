@@ -84,6 +84,15 @@ contract WalletTest is Test {
         w.execute(bob, abi.encodeWithSignature('foo()'));
     }
 
+    function testExecuteETHTransfer() public payable {
+        vm.prank(entryPoint);
+        // Execute the delegatecall to the forwarder
+        w.execute(
+            bytes32(uint(uint160(address(ethFwd)))),
+            abi.encodeWithSelector(ethFwd.fwdETH.selector, bobAddr, 1 ether)
+        );
+    }
+
     function testExecuteETHTransferResult() public payable {
         assertEq(bobAddr.balance, 0 ether);
         vm.prank(entryPoint);
