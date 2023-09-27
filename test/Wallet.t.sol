@@ -78,38 +78,38 @@ contract WalletTest is Test {
 
     function testExecuteAsOwner() public payable {
         vm.prank(alice);
-        w.execute(bobHash, 0, abi.encodeWithSignature('foo()'), 0);
+        w.execute(bobHash, 0, abi.encodeWithSignature('foo()'), 1);
     }
 
     function testExecuteAsEntryPoint() public payable {
-        vm.prank(entryPoint);
-        w.execute(bobHash, 0, abi.encodeWithSignature('foo()'), 0);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    function testFailExecuteAsNotEntrypointOrOwner() public payable {
-        w.execute(bobHash, 0, abi.encodeWithSignature('foo()'), 0);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    function testExecuteDelegatecall() public payable {
         vm.prank(entryPoint);
         w.execute(bobHash, 0, abi.encodeWithSignature('foo()'), 1);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    function testFailExecuteAsNotEntrypointOrOwner() public payable {
+        w.execute(bobHash, 0, abi.encodeWithSignature('foo()'), 1);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    function testExecuteDelegatecall() public payable {
+        vm.prank(entryPoint);
+        w.execute(bobHash, 0, abi.encodeWithSignature('foo()'), 0);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     function testExecuteETHTransfer() public payable {
         vm.prank(entryPoint);
-        w.execute(bobHash, 1 ether, '', 0);
+        w.execute(bobHash, 1 ether, '', 1);
     }
 
     function testExecuteETHTransferAndCheckResult() public payable {
         assertEq(bob.balance, 0 ether);
         vm.prank(entryPoint);
-        w.execute(bobHash, 1 ether, '', 0);
+        w.execute(bobHash, 1 ether, '', 1);
         assertEq(bob.balance, 1 ether);
     }
 
@@ -121,7 +121,7 @@ contract WalletTest is Test {
             erc20Hash,
             0,
             abi.encodeWithSelector(MockERC20.transfer.selector, alice, 100 ether), // of tokens.
-            0
+            1
         );
     }
 
@@ -131,7 +131,7 @@ contract WalletTest is Test {
             erc20Hash,
             0,
             abi.encodeWithSelector(MockERC20.transfer.selector, bob, 100 ether), // of tokens.
-            0
+            1
         );
     }
 
@@ -142,7 +142,7 @@ contract WalletTest is Test {
             erc20Hash,
             0,
             abi.encodeWithSelector(MockERC20.transfer.selector, bob, 100 ether), // of tokens.
-            0
+            1
         );
         assertEq(erc20.balanceOf(bob), 200 ether);
     }
@@ -155,7 +155,7 @@ contract WalletTest is Test {
             erc721Hash,
             0,
             abi.encodeWithSelector(MockERC721.transferFrom.selector, address(w), bob, 1), // id of token.
-            0
+            1
         );
     }
 

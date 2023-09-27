@@ -15,7 +15,7 @@ contract Wallet {
         assembly {
             if and(xor(caller(), o), xor(caller(), entryPoint)) { revert(0, 0) }
             calldatacopy(0, data.offset, data.length)
-            if iszero(op) {
+            if op {
                 let success := call(gas(), to, val, 0, data.length, 0, 0)
                 returndatacopy(0, 0, returndatasize())
                 if iszero(success) { revert(0, returndatasize()) }
@@ -32,16 +32,16 @@ contract Wallet {
     function isValidSignature(bytes32 hash, bytes calldata sig) public payable {
         bytes32 o = owner;
         assembly {
-            let m := mload(64)
+            let m := mload(0x40)
             mstore(0, hash)
-            mstore(32, 28) // Cursed?
-            calldatacopy(64, sig.offset, 64)
-            if eq(o, mload(staticcall(gas(), 1, 0, 128, 1, 32))) {
-                mstore(64, m)
-                mstore(32, 0x1626ba7e)
-                return(60, 32)
+            mstore(0x20, byte(0, calldataload(add(sig.offset, 0x40)))) // `v`.
+            calldatacopy(0x40, sig.offset, 0x40) // `r`, `s`.
+            if eq(o, mload(staticcall(gas(), 1, 0, 0x80, 0x01, 0x20))) {
+                mstore(0x40, m)
+                mstore(0x20, 0x1626ba7e)
+                return(0x3C, 0x20)
             }
-            mstore(64, m)
+            mstore(0x40, m)
         }
     }
 
@@ -69,12 +69,12 @@ contract Wallet {
         bytes32 o = owner;
         assembly ("memory-safe") {
             if xor(caller(), entryPoint) { revert(0, 0) }
-            let m := mload(64)
+            let m := mload(0x40)
             mstore(0, userOpHash)
-            mstore(32, 27) // Cursed?
-            calldatacopy(64, sig.offset, 64)
-            validationData := xor(o, mload(staticcall(gas(), 1, 0, 128, 1, 32)))
-            mstore(64, m)
+            mstore(0x20, byte(0, calldataload(add(sig.offset, 0x40)))) // `v`.
+            calldatacopy(0x40, sig.offset, 0x40) // `r`, `s`.
+            validationData := xor(o, mload(staticcall(gas(), 1, 0, 0x80, 0x01, 0x20)))
+            mstore(0x40, m)
         }
     }
 
@@ -83,8 +83,8 @@ contract Wallet {
 
     fallback() external payable {
         assembly {
-            mstore(32, shr(224, calldataload(0)))
-            return(60, 32)
+            mstore(0x20, shr(224, calldataload(0)))
+            return(0x3C, 0x20)
         }
     }
 }
