@@ -5,9 +5,9 @@ import {Wallet, WalletFactory} from '../src/WalletFactory.sol';
 import '@forge/Test.sol';
 
 contract WalletFactoryTest is Test {
-    bytes32 constant owner = bytes32(uint(uint160(address(0xa))));
+    bytes32 constant owner = bytes32(uint(uint160(address(0xa)))); // Hashed.
 
-    WalletFactory immutable wf = new WalletFactory();
+    WalletFactory immutable wf = new WalletFactory(); // Factory.
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -16,13 +16,13 @@ contract WalletFactoryTest is Test {
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testDeploy() public payable {
-        wf.deploy(owner);
+        wf.deploy(owner); // Put in hashed owner.
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testFailDuplicateDeploy() public payable {
-        wf.deploy(owner);
-        wf.deploy(owner);
+        wf.deploy(owner); // Do once.
+        wf.deploy(owner); // Fail once.
     }
 }

@@ -47,7 +47,7 @@ contract WalletTest is Test {
         WalletFactory f = new WalletFactory();
         w = f.deploy(aliceHash);
 
-        payable(address(w)).transfer(100 ether);
+        payable(address(w)).transfer(100 ether); // Send ETH.
 
         erc20 = new MockERC20("Test", "TEST", 18);
         erc20Hash = bytes32(uint(uint160(address(erc20))));
@@ -56,14 +56,14 @@ contract WalletTest is Test {
         erc1155 = new MockERC1155();
         erc1155Hash = bytes32(uint(uint160(address(erc1155))));
 
-        MockERC20(erc20).mint(bob, 100 ether); // Warm.
-        MockERC20(erc20).mint(address(w), 1000 ether);
+        MockERC20(erc20).mint(bob, 100 ether); // Mint usr tokens.
+        MockERC20(erc20).mint(address(w), 1000 ether); // Mint wallet tokens.
 
-        erc721.mint(address(w), 1);
-        erc721.mint(alice, 2);
-        erc1155.mint(address(w), 1, 1, '');
+        erc721.mint(address(w), 1); // Mint wallet NFT.
+        erc721.mint(alice, 2); // Mint usr NFT.
+        erc1155.mint(address(w), 1, 1, ''); // Mint wallet ERC1155.
 
-        contractWallet = new MockERC1271Wallet(alice);
+        contractWallet = new MockERC1271Wallet(alice); // Placeholder contract w.
         contractOwnedW = f.deploy(bytes32(uint(uint160(address(contractWallet)))));
     }
 
@@ -78,7 +78,7 @@ contract WalletTest is Test {
 
     function testExecuteAsOwner() public payable {
         vm.prank(alice);
-        w.execute(bobHash, 0, abi.encodeWithSignature('foo()'), 1);
+        w.execute(bobHash, 0, abi.encodeWithSignature('foo()'), 1); // `1` is call().
     }
 
     function testExecuteAsEntryPoint() public payable {
@@ -96,7 +96,7 @@ contract WalletTest is Test {
 
     function testExecuteDelegatecall() public payable {
         vm.prank(entryPoint);
-        w.execute(bobHash, 0, abi.encodeWithSignature('foo()'), 0);
+        w.execute(bobHash, 0, abi.encodeWithSignature('foo()'), 0); // `0` is delegatecall().
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -164,7 +164,7 @@ contract WalletTest is Test {
     function testIsValidSignature() public payable {
         bytes32 hash = keccak256(abi.encodePacked('foo()'));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, hash);
-        // ABI encode hash and sig as expected by isValidSignature() / eip-1271
+        // ABI encode hash and sig as expected by isValidSignature() / eip-1271.
         bytes memory data = abi.encodeWithSelector(0x1626ba7e, hash, abi.encodePacked(r, s, v));
         (, bytes memory ret) = address(w).staticcall(data);
 
@@ -173,10 +173,10 @@ contract WalletTest is Test {
             selector := mload(add(ret, 0x20))
         }
 
-        assert(selector == 0x1626ba7e);
+        assert(selector == 0x1626ba7e); // Check match.
     }
 
-    // function testIsValidSignatureFromContract() public payable {
+    // function testIsValidSignatureFromContract() public payable { // note: placeholder.
     //     bytes32 hash = keccak256(bytes('FOO'));
 
     //     (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, hash);
@@ -219,6 +219,7 @@ contract WalletTest is Test {
     {
         userOp.sender = address(w);
         userOp.nonce = IEntryPoint(entryPoint).getNonce(userOp.sender, key);
+        // Null most.
         userOp.initCode;
         userOp.callData;
         userOp.callGasLimit;
@@ -231,24 +232,27 @@ contract WalletTest is Test {
     }
 
     function testValidateUserOp() public payable {
+        // Success case.
         Wallet.UserOperation memory userOp = createUserOp(aliceKey, 0);
         bytes32 userOpHash = IEntryPoint(entryPoint).getUserOpHash(userOp);
 
-        vm.prank(entryPoint);
+        vm.prank(entryPoint); // Call as EP and check valid.
         assertEq(w.validateUserOp(userOp, userOpHash, 0), 0); // Return `0` for valid.
     }
 
-    /*function testBadValidateUserOp() public payable {
+    function testBadValidateUserOp() public payable {
+        // Fail case.
         Wallet.UserOperation memory userOp = createUserOp(bobKey, 0);
         bytes32 userOpHash = IEntryPoint(entryPoint).getUserOpHash(userOp);
 
-        vm.prank(entryPoint);
-        assertEq(w.validateUserOp(userOp, userOpHash, 0), 1); // Return `1` for fail.
-    }*/
+        vm.prank(entryPoint); // Call as EP and check valid.
+        assertEq(w.validateUserOp(userOp, userOpHash, 0), 1); // Return `1` for invalid.
+    }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function sign(uint pK, bytes32 hash) internal pure returns (bytes memory) {
+        // Helper.
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pK, hash);
         return abi.encodePacked(r, s, v);
     }
