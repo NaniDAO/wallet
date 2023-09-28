@@ -1,53 +1,14 @@
-# zenplate [![tests](https://github.com/z0r0z/zenplate/actions/workflows/ci.yml/badge.svg?label=tests)](https://github.com/z0r0z/zenplate/actions/workflows/ci.yml) [![License: AGPL-3.0-only][license-badge]][license] ![solidity](https://img.shields.io/badge/solidity-%5E0.8.19-black) [![Foundry][foundry-badge]][foundry]
+# [Wallet](https://github.com/NaniDAO/wallet)  [![License: AGPL-3.0-only](https://img.shields.io/badge/License-AGPL-black.svg)](https://opensource.org/license/agpl-v3/) [![solidity](https://img.shields.io/badge/solidity-%5E0.8.19-black)](https://docs.soliditylang.org/en/v0.8.19/) [![Foundry](https://img.shields.io/badge/Built%20with-Foundry-000000.svg)](https://getfoundry.sh/) ![tests](https://github.com/NaniDAO/wallet/actions/workflows/ci.yml/badge.svg)
 
-[foundry]: https://getfoundry.sh/
-[foundry-badge]: https://img.shields.io/badge/Built%20with-Foundry-FFDB1C.svg
-[license]: https://opensource.org/license/agpl-v3/
-[license-badge]: https://img.shields.io/badge/License-AGPL-black.svg
-
-A very simple foundry template for optimal contract testing.
+Minimal contract wallet with native [EIP-4337](https://eips.ethereum.org/EIPS/eip-4337) support. Hyper-optimized for gas efficiency and cheap relay transactions. Inspired by [Solady](https://github.com/Vectorized/solady/tree/main) Solidity library.
 
 ## Getting Started
-
-### Installing
-
-Click [`use this template`](https://github.com/z0r0z/zenplate/generate) to create a new repository with this repo as the initial state.
-
-Or, if your repo already exists, run:
-```sh
-forge init --template https://github.com/z0r0z/zenplate
-git submodule update --init --recursive
-forge install
-```
-
-Run `./utils/rename.sh` to rename all instances of `zenplate` with the name of your project/repository.
-
-### First time with Forge/Foundry?
-
-See the official Foundry installation [instructions](https://github.com/foundry-rs/foundry/blob/master/README.md#installation).
-
-Then, install the [foundry](https://github.com/foundry-rs/foundry) toolchain installer (`foundryup`) with:
-```bash
-curl -L https://foundry.paradigm.xyz | bash
-```
-
-Now that you've installed the `foundryup` binary,
-anytime you need to get the latest `forge` or `cast` binaries,
-you can run `foundryup`.
-
-So, simply execute:
-```bash
-foundryup
-```
-
-## Usage
 
 Build the foundry project with `forge build`. Run tests with `forge test`. Measure gas with `forge snapshot`. Format with `forge fmt`.
 
 ## GitHub Actions
 
-This template comes with GitHub Actions pre-configured. Your contracts will be linted and tested on every push and pull
-request made to the `main` branch.
+Contracts will be tested and gas measured on every push and pull request.
 
 You can edit the CI script in [.github/workflows/ci.yml](./.github/workflows/ci.yml).
 
@@ -56,18 +17,16 @@ You can edit the CI script in [.github/workflows/ci.yml](./.github/workflows/ci.
 ```txt
 lib
 ├─ forge-std — https://github.com/foundry-rs/forge-std
+├─ solady - https://github.com/Vectorized/solady 
 scripts
-├─ Deploy.s.sol — Example Contract Deployment Script
+├─ Deploy.s.sol — Example Deployment
 src
-├─ Tester — Test Contract
+├─ Wallet — Core Wallet Contract
+├─ WalletFactory — Wallet Deployer
 test
-└─ Tester.t - Testing Contract
+└─ Wallet.t - Tests for Wallet
+└─ WalletFactory.t - Tests for Deployer
 ```
-
-## Notable Mentions
-
-- [femplate](https://github.com/refcell/femplate)
-- [foundry-template](https://github.dev/PaulRBerg/foundry-template)
 
 ## Disclaimer
 
