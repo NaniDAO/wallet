@@ -9,29 +9,27 @@ contract Wallet {
         owner = _owner;
     }
 
-    // Execute Op...
+    /// @dev Permissioned call or delegatecall logic. Reverts zeroed. Returns data digest.
     function execute(bytes32 to, uint val, bytes calldata data, uint op) public payable {
         bytes32 o = owner;
         assembly ("memory-safe") {
-            // Restricted access to `owner` or `entryPoint`.
+            // Only `owner` or `entryPoint` can execute Wallet `op`.
             if and(xor(caller(), o), xor(caller(), entryPoint)) { revert(0, 0) }
             calldatacopy(0, data.offset, data.length)
             if op {
                 if iszero(call(gas(), to, val, 0, data.length, 0, 0)) { revert(0, 0) }
                 returndatacopy(0, 0, returndatasize())
                 return(0, returndatasize())
-            } // If zero `op`, perform delegatecall().
+            } // If no `op` input use delegatecall.
             if iszero(delegatecall(gas(), to, 0, data.length, 0, 0)) { revert(0, 0) }
             returndatacopy(0, 0, returndatasize())
             return(0, returndatasize())
         }
     }
 
-    // eip-1271...
-    // Audit-Note: We assume low-level calls and thus don't bother with view.
-    // Let's review the security implications though.
+    /// @dev ERC1271 contract signature validation logic. Returns magic value.
     function isValidSignature(bytes32 hash, bytes calldata sig) public payable {
-        bytes32 o = owner; // Pull `owner` onto stack.
+        bytes32 o = owner;
         assembly ("memory-safe") {
             mstore(0, hash) // Load `hash` into first slot.
             // Load `v` as 65th byte in `sig` by adding 64 to offset.
@@ -43,12 +41,10 @@ contract Wallet {
                 mstore(0x20, 0x1626ba7e) // Store magic value.
                 return(0x3C, 0x20) // Return magic value.
             }
-            // Audit-Note: We don't bother with return as eip-1271 doesn't require
-            // explicit return value for fail case and it will just be null?
         }
     }
 
-    // eip-4337...
+    /// @dev ERC4337 struct.
     struct UserOperation {
         address sender;
         uint nonce;
@@ -63,6 +59,7 @@ contract Wallet {
         bytes signature;
     }
 
+    /// @dev ERC4337 account.
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash,
@@ -87,16 +84,13 @@ contract Wallet {
         }
     }
 
-    // Receivers...
+    /// @dev Ether (ETH) receiver.
     receive() external payable {}
 
-    // Audit-Note: This is for `safeTransfer`-type
-    // receiver compatibility. Since only `msg.sig`
-    // can be returned, risk seems low. Other checks
-    // are punted onto the calling contracts etc.
+    /// @dev Callback handling.
     fallback() external payable {
         assembly ("memory-safe") {
-            // Shift unexpected call to `msg.sig`.
+            // Shift unknown call into its `msg.sig`.
             mstore(0x20, shr(224, calldataload(0)))
             return(0x3C, 0x20) // Return `msg.sig`.
         }
