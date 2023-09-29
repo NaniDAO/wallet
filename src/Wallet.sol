@@ -11,27 +11,18 @@ contract Wallet {
 
     // Execute Op...
     function execute(bytes32 to, uint val, bytes calldata data, uint op) public payable {
-        bytes32 o = owner; // Pull `owner` onto stack.
+        bytes32 o = owner;
         assembly ("memory-safe") {
-            // Only `owner` or `entryPoint` may call this function.
+            // Restricted access to `owner` or `entryPoint`.
             if and(xor(caller(), o), xor(caller(), entryPoint)) { revert(0, 0) }
-            calldatacopy(0, data.offset, data.length) // Copy `data` to memory.
+            calldatacopy(0, data.offset, data.length)
             if op {
-                // If any non-zero `op` we use call().
-                let success := call(gas(), to, val, 0, data.length, 0, 0)
-                // Copy returned data to memory.
+                if iszero(call(gas(), to, val, 0, data.length, 0, 0)) { revert(0, 0) }
                 returndatacopy(0, 0, returndatasize())
-                // If call() failed, revert with return data.
-                if iszero(success) { revert(0, returndatasize()) }
-                // Otherwise, return data.
                 return(0, returndatasize())
             } // If zero `op`, perform delegatecall().
-            let success := delegatecall(gas(), to, 0, data.length, 0, 0)
-            // Copy returned data to memory.
+            if iszero(delegatecall(gas(), to, 0, data.length, 0, 0)) { revert(0, 0) }
             returndatacopy(0, 0, returndatasize())
-            // If delegatecall() failed, revert with return data.
-            if iszero(success) { revert(0, returndatasize()) }
-            // Otherwise, return data.
             return(0, returndatasize())
         }
     }
