@@ -38,8 +38,8 @@ contract Wallet {
             calldatacopy(0x40, sig.offset, 0x40)
             // If return data matches `owner` return EIP-1271 magic value.
             if eq(o, mload(staticcall(gas(), 1, 0, 0x80, 0x01, 0x20))) {
-                mstore(0x20, 0x1626ba7e) // Store magic value.
-                return(0x3C, 0x20) // Return magic value.
+                mstore(0x00, 0x1626ba7e) // Store magic value.
+                return(0x1C, 0x04) // Return magic value.
             }
         }
     }
