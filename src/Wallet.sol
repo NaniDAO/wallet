@@ -32,14 +32,12 @@ contract Wallet {
         bytes32 o = owner;
         assembly ("memory-safe") {
             mstore(0, hash) // Load `hash` into first slot.
-            // Load `v` as 65th byte in `sig` by adding 64 to offset.
-            mstore(0x20, byte(0, calldataload(add(sig.offset, 0x40))))
-            // Load `r` and `s` in `sig` as 64 bytes from offset.
-            calldatacopy(0x40, sig.offset, 0x40)
+            // assume signature is encoded as v + r + s
+            calldatacopy(0x20, sig.offset, sig.length)
             // If return data matches `owner` return EIP-1271 magic value.
             if eq(o, mload(staticcall(gas(), 1, 0, 0x80, 0x01, 0x20))) {
-                mstore(0x20, 0x1626ba7e) // Store magic value.
-                return(0x3C, 0x20) // Return magic value.
+                mstore(0x00, 0x1626ba7e) // Store magic value.
+                return(0x1C, 0x04) // Return magic value.
             }
         }
     }
@@ -72,11 +70,8 @@ contract Wallet {
             // Only `entryPoint` may call this function.
             if xor(caller(), entryPoint) { revert(0, 0) }
             let m := mload(0x40) // Cache free memory pointer.
-            mstore(0, userOpHash) // Memo `userOpHash` into first slot.
-            // Memo `v` as 65th byte in `sig` by adding 64 to offset.
-            mstore(0x20, byte(0, calldataload(add(sig.offset, 0x40))))
-            // Memo `r` and `s` in `sig` as 64 bytes from offset.
-            calldatacopy(0x40, sig.offset, 0x40)
+            mstore(0x00, userOpHash) // Memo `userOpHash` into first slot.
+            calldatacopy(0x20, sig.offset, sig.length)
             // If return data matches `owner` magic value of `0` is default. Else, `1`.
             // This is what the `entryPoint` expects under eip-4337 though unintuitive.
             if xor(o, mload(staticcall(gas(), 1, 0, 0x80, 0x01, 0x20))) { validationData := 1 }
