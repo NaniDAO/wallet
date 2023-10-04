@@ -3,61 +3,56 @@ pragma solidity ^0.8.19;
 
 contract Wallet {
     address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
-    bytes32 immutable owner;
+    bytes32 immutable user;
 
-    constructor(bytes32 _owner) payable {
-        owner = _owner;
+    constructor(bytes32 _user) payable {
+        user = _user;
     }
 
-    // Execute Op...
-    function execute(bytes32 to, uint val, bytes calldata data, uint op) public payable {
-        bytes32 o = owner; // Pull `owner` onto stack.
+    /// @dev Permissioned call execution logic. Returns data.
+    function execute(address to, uint val, bytes calldata data) public payable {
+        bytes32 usr = user;
         assembly ("memory-safe") {
-            // Only `owner` or `entryPoint` may call this function.
-            if and(xor(caller(), o), xor(caller(), entryPoint)) { revert(0, 0) }
-            calldatacopy(0, data.offset, data.length) // Copy `data` to memory.
-            if op {
-                // If any non-zero `op` we use call().
-                let success := call(gas(), to, val, 0, data.length, 0, 0)
-                // Copy returned data to memory.
-                returndatacopy(0, 0, returndatasize())
-                // If call() failed, revert with return data.
-                if iszero(success) { revert(0, returndatasize()) }
-                // Otherwise, return data.
-                return(0, returndatasize())
-            } // If zero `op`, perform delegatecall().
-            let success := delegatecall(gas(), to, 0, data.length, 0, 0)
-            // Copy returned data to memory.
-            returndatacopy(0, 0, returndatasize())
-            // If delegatecall() failed, revert with return data.
-            if iszero(success) { revert(0, returndatasize()) }
-            // Otherwise, return data.
-            return(0, returndatasize())
-        }
-    }
-
-    // eip-1271...
-    // Audit-Note: We assume low-level calls and thus don't bother with view.
-    // Let's review the security implications though.
-    function isValidSignature(bytes32 hash, bytes calldata sig) public payable {
-        bytes32 o = owner; // Pull `owner` onto stack.
-        assembly ("memory-safe") {
-            mstore(0, hash) // Load `hash` into first slot.
-            // Load `v` as 65th byte in `sig` by adding 64 to offset.
-            mstore(0x20, byte(0, calldataload(add(sig.offset, 0x40))))
-            // Load `r` and `s` in `sig` as 64 bytes from offset.
-            calldatacopy(0x40, sig.offset, 0x40)
-            // If return data matches `owner` return EIP-1271 magic value.
-            if eq(o, mload(staticcall(gas(), 1, 0, 0x80, 0x01, 0x20))) {
-                mstore(0x20, 0x1626ba7e) // Store magic value.
-                return(0x3C, 0x20) // Return magic value.
+            if and(xor(caller(), usr), xor(caller(), entryPoint)) { revert(0x00, 0x00) }
+            calldatacopy(0x00, data.offset, data.length)
+            if call(gas(), to, val, 0x00, data.length, 0x00, 0x00) {
+                returndatacopy(0x00, 0x00, returndatasize())
+                return(0x00, returndatasize())
             }
-            // Audit-Note: We don't bother with return as eip-1271 doesn't require
-            // explicit return value for fail case and it will just be null?
+            revert(0x00, returndatasize())
         }
     }
 
-    // eip-4337...
+    /// @dev Permissioned delegatecall execution logic. Returns data.
+    function execute(address to, bytes calldata data) public payable {
+        bytes32 usr = user;
+        assembly ("memory-safe") {
+            if and(xor(caller(), usr), xor(caller(), entryPoint)) { revert(0x00, 0x00) }
+            calldatacopy(0x00, data.offset, data.length)
+            if delegatecall(gas(), to, 0x00, data.length, 0x00, 0x00) {
+                returndatacopy(0x00, 0x00, returndatasize())
+                return(0x00, returndatasize())
+            }
+            revert(0x00, returndatasize())
+        }
+    }
+
+    /// @dev ERC1271 contract signature validation logic. Returns magic value.
+    function isValidSignature(bytes32 hash, bytes calldata signature) public view {
+        bytes32 usr = user;
+        assembly ("memory-safe") {
+            mstore(0x00, hash) // Place `hash` into first slot.
+            // Assume the `signature` is encoded as `v + r + s`.
+            calldatacopy(0x20, signature.offset, signature.length)
+            // If the return data matches `user` return ERC1271 magic value.
+            if eq(usr, mload(staticcall(gas(), 0x01, 0x00, 0x80, 0x01, 0x20))) {
+                mstore(0x00, 0x1626ba7e) // Store magic value.
+                return(0x1C, 0x04) // Return magic value.
+            }
+        }
+    }
+
+    /// @dev ERC4337 struct.
     struct UserOperation {
         address sender;
         uint nonce;
@@ -72,40 +67,41 @@ contract Wallet {
         bytes signature;
     }
 
+    /// @dev ERC4337 account.
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash,
-        uint // Prefunded.
+        uint missingAccountFunds
     ) public payable returns (uint validationData) {
         // Memo `sig` calldata item from struct.
         bytes calldata sig = userOp.signature;
-        bytes32 o = owner; // Pull `owner` onto stack.
+        bytes32 usr = user; // Pull `user` onto stack.
         assembly ("memory-safe") {
             // Only `entryPoint` may call this function.
-            if xor(caller(), entryPoint) { revert(0, 0) }
-            let m := mload(0x40) // Cache free memory pointer.
-            mstore(0, userOpHash) // Memo `userOpHash` into first slot.
-            // Memo `v` as 65th byte in `sig` by adding 64 to offset.
-            mstore(0x20, byte(0, calldataload(add(sig.offset, 0x40))))
-            // Memo `r` and `s` in `sig` as 64 bytes from offset.
-            calldatacopy(0x40, sig.offset, 0x40)
-            // If return data matches `owner` magic value of `0` is default. Else, `1`.
-            // This is what the `entryPoint` expects under eip-4337 though unintuitive.
-            if xor(o, mload(staticcall(gas(), 1, 0, 0x80, 0x01, 0x20))) { validationData := 1 }
+            if xor(caller(), entryPoint) { revert(0x00, 0x00) }
+            let m := mload(0x40) // Cache the free memory pointer.
+            mstore(0x00, userOpHash) // Place `userOpHash` into first slot.
+            // Assume the `signature` is encoded as `v + r + s`.
+            calldatacopy(0x20, sig.offset, sig.length)
+            // If ecrecover doesn't match `user`, `validationData` is `1`, else `0`.
+            if xor(usr, mload(staticcall(gas(), 0x01, 0x00, 0x80, 0x01, 0x20))) {
+                validationData := 1
+            }
             mstore(0x40, m) // Restore the free memory pointer.
+            // Refund the `entryPoint` if any relayer gas is owed.
+            if missingAccountFunds {
+                pop(call(gas(), caller(), missingAccountFunds, 0x00, 0x00, 0x00, 0x00))
+            }
         }
     }
 
-    // Receivers...
+    /// @dev Ether (ETH) receiver.
     receive() external payable {}
 
-    // Audit-Note: This is for `safeTransfer`-type
-    // receiver compatibility. Since only `msg.sig`
-    // can be returned, risk seems low. Other checks
-    // are punted onto the calling contracts etc.
+    /// @dev Callback handling.
     fallback() external payable {
         assembly ("memory-safe") {
-            // Shift unexpected call to `msg.sig`.
+            // Shift unknown call into its `msg.sig`.
             mstore(0x20, shr(224, calldataload(0)))
             return(0x3C, 0x20) // Return `msg.sig`.
         }

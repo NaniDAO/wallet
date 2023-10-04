@@ -78,38 +78,38 @@ contract WalletTest is Test {
 
     function testExecuteAsOwner() public payable {
         vm.prank(alice);
-        w.execute(bobHash, 0, abi.encodeWithSignature('foo()'), 1); // `1` is call().
+        w.execute(bob, 0, abi.encodeWithSignature('foo()'));
     }
 
     function testExecuteAsEntryPoint() public payable {
         vm.prank(entryPoint);
-        w.execute(bobHash, 0, abi.encodeWithSignature('foo()'), 1);
+        w.execute(bob, 0, abi.encodeWithSignature('foo()'));
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testFailExecuteAsNotEntrypointOrOwner() public payable {
-        w.execute(bobHash, 0, abi.encodeWithSignature('foo()'), 1);
+        w.execute(bob, 0, abi.encodeWithSignature('foo()'));
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testExecuteDelegatecall() public payable {
         vm.prank(entryPoint);
-        w.execute(bobHash, 0, abi.encodeWithSignature('foo()'), 0); // `0` is delegatecall().
+        w.execute(bob, abi.encodeWithSignature('foo()'));
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     function testExecuteETHTransfer() public payable {
         vm.prank(entryPoint);
-        w.execute(bobHash, 1 ether, '', 1);
+        w.execute(bob, 1 ether, '');
     }
 
     function testExecuteETHTransferAndCheckResult() public payable {
         assertEq(bob.balance, 0 ether);
         vm.prank(entryPoint);
-        w.execute(bobHash, 1 ether, '', 1);
+        w.execute(bob, 1 ether, '');
         assertEq(bob.balance, 1 ether);
     }
 
@@ -118,20 +118,14 @@ contract WalletTest is Test {
     function testExecuteERC20Transfer() public payable {
         vm.prank(entryPoint);
         w.execute(
-            erc20Hash,
-            0,
-            abi.encodeWithSelector(MockERC20.transfer.selector, alice, 100 ether), // of tokens.
-            1
+            address(erc20), 0, abi.encodeWithSelector(MockERC20.transfer.selector, alice, 100 ether)
         );
     }
 
     function testExecuteERC20TransferWarm() public payable {
         vm.prank(entryPoint);
         w.execute(
-            erc20Hash,
-            0,
-            abi.encodeWithSelector(MockERC20.transfer.selector, bob, 100 ether), // of tokens.
-            1
+            address(erc20), 0, abi.encodeWithSelector(MockERC20.transfer.selector, bob, 100 ether)
         );
     }
 
@@ -139,10 +133,7 @@ contract WalletTest is Test {
         assertEq(erc20.balanceOf(bob), 100 ether);
         vm.prank(entryPoint);
         w.execute(
-            erc20Hash,
-            0,
-            abi.encodeWithSelector(MockERC20.transfer.selector, bob, 100 ether), // of tokens.
-            1
+            address(erc20), 0, abi.encodeWithSelector(MockERC20.transfer.selector, bob, 100 ether)
         );
         assertEq(erc20.balanceOf(bob), 200 ether);
     }
@@ -152,10 +143,9 @@ contract WalletTest is Test {
     function testExecuteERC721Transfer() public payable {
         vm.prank(entryPoint);
         w.execute(
-            erc721Hash,
+            address(erc721),
             0,
-            abi.encodeWithSelector(MockERC721.transferFrom.selector, address(w), bob, 1), // id of token.
-            1
+            abi.encodeWithSelector(MockERC721.transferFrom.selector, address(w), bob, 1)
         );
     }
 
@@ -165,7 +155,7 @@ contract WalletTest is Test {
         bytes32 hash = keccak256(abi.encodePacked('foo()'));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, hash);
         // ABI encode hash and sig as expected by isValidSignature() / eip-1271.
-        bytes memory data = abi.encodeWithSelector(0x1626ba7e, hash, abi.encodePacked(r, s, v));
+        bytes memory data = abi.encodeWithSelector(0x1626ba7e, hash, abi.encode(v, r, s));
         (, bytes memory ret) = address(w).staticcall(data);
 
         bytes4 selector; // Slice selector return.
@@ -254,7 +244,7 @@ contract WalletTest is Test {
     function sign(uint pK, bytes32 hash) internal pure returns (bytes memory) {
         // Helper.
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pK, hash);
-        return abi.encodePacked(r, s, v);
+        return abi.encode(v, r, s);
     }
 }
 
