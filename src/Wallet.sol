@@ -89,7 +89,9 @@ contract Wallet {
             }
             mstore(0x40, m) // Restore the free memory pointer.
             // Refund the `entryPoint` if any relayer gas is owed.
-            pop(call(gas(), caller(), missingAccountFunds, 0x00, 0x00, 0x00, 0x00))
+            if missingAccountFunds {
+                pop(call(gas(), caller(), missingAccountFunds, 0x00, 0x00, 0x00, 0x00))
+            }
         }
     }
 
