@@ -3,39 +3,49 @@ pragma solidity ^0.8.19;
 
 contract Wallet {
     address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
-    bytes32 immutable owner;
+    bytes32 immutable user;
 
-    constructor(bytes32 _owner) payable {
-        owner = _owner;
+    constructor(bytes32 _user) payable {
+        user = _user;
     }
 
-    /// @dev Permissioned call or delegatecall logic. Reverts zeroed. Returns data digest.
-    function execute(bytes32 to, uint val, bytes calldata data, uint op) public payable {
-        bytes32 o = owner;
+    /// @dev Permissioned call execution logic. Returns data.
+    function execute(address to, uint val, bytes calldata data) public payable {
+        bytes32 usr = user;
         assembly ("memory-safe") {
-            // Only `owner` or `entryPoint` can execute Wallet `op`.
-            if and(xor(caller(), o), xor(caller(), entryPoint)) { revert(0, 0) }
-            calldatacopy(0, data.offset, data.length)
-            if op {
-                if iszero(call(gas(), to, val, 0, data.length, 0, 0)) { revert(0, 0) }
-                returndatacopy(0, 0, returndatasize())
-                return(0, returndatasize())
-            } // If no `op` input use delegatecall.
-            if iszero(delegatecall(gas(), to, 0, data.length, 0, 0)) { revert(0, 0) }
-            returndatacopy(0, 0, returndatasize())
-            return(0, returndatasize())
+            if and(xor(caller(), usr), xor(caller(), entryPoint)) { revert(0x00, 0x00) }
+            calldatacopy(0x00, data.offset, data.length)
+            if call(gas(), to, val, 0x00, data.length, 0x00, 0x00) {
+                returndatacopy(0x00, 0x00, returndatasize())
+                return(0x00, returndatasize())
+            }
+            revert(0x00, returndatasize())
+        }
+    }
+
+    /// @dev Permissioned delegatecall execution logic. Returns data.
+    function execute(address to, bytes calldata data) public payable {
+        bytes32 usr = user;
+        assembly ("memory-safe") {
+            if and(xor(caller(), usr), xor(caller(), entryPoint)) { revert(0x00, 0x00) }
+            calldatacopy(0x00, data.offset, data.length)
+            if delegatecall(gas(), to, 0x00, data.length, 0x00, 0x00) {
+                returndatacopy(0x00, 0x00, returndatasize())
+                return(0x00, returndatasize())
+            }
+            revert(0x00, returndatasize())
         }
     }
 
     /// @dev ERC1271 contract signature validation logic. Returns magic value.
-    function isValidSignature(bytes32 hash, bytes calldata sig) public payable {
-        bytes32 o = owner;
+    function isValidSignature(bytes32 hash, bytes calldata signature) public view {
+        bytes32 usr = user;
         assembly ("memory-safe") {
-            mstore(0, hash) // Load `hash` into first slot.
-            // assume signature is encoded as v + r + s
-            calldatacopy(0x20, sig.offset, sig.length)
-            // If return data matches `owner` return EIP-1271 magic value.
-            if eq(o, mload(staticcall(gas(), 1, 0, 0x80, 0x01, 0x20))) {
+            mstore(0x00, hash) // Place `hash` into first slot.
+            // Assume the `signature` is encoded as `v + r + s`.
+            calldatacopy(0x20, signature.offset, signature.length)
+            // If the return data matches `user` return ERC1271 magic value.
+            if eq(usr, mload(staticcall(gas(), 0x01, 0x00, 0x80, 0x01, 0x20))) {
                 mstore(0x00, 0x1626ba7e) // Store magic value.
                 return(0x1C, 0x04) // Return magic value.
             }
@@ -61,21 +71,25 @@ contract Wallet {
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash,
-        uint // Prefunded.
+        uint missingAccountFunds
     ) public payable returns (uint validationData) {
         // Memo `sig` calldata item from struct.
         bytes calldata sig = userOp.signature;
-        bytes32 o = owner; // Pull `owner` onto stack.
+        bytes32 usr = user; // Pull `user` onto stack.
         assembly ("memory-safe") {
             // Only `entryPoint` may call this function.
-            if xor(caller(), entryPoint) { revert(0, 0) }
-            let m := mload(0x40) // Cache free memory pointer.
-            mstore(0x00, userOpHash) // Memo `userOpHash` into first slot.
+            if xor(caller(), entryPoint) { revert(0x00, 0x00) }
+            let m := mload(0x40) // Cache the free memory pointer.
+            mstore(0x00, userOpHash) // Place `userOpHash` into first slot.
+            // Assume the `signature` is encoded as `v + r + s`.
             calldatacopy(0x20, sig.offset, sig.length)
-            // If return data matches `owner` magic value of `0` is default. Else, `1`.
-            // This is what the `entryPoint` expects under eip-4337 though unintuitive.
-            if xor(o, mload(staticcall(gas(), 1, 0, 0x80, 0x01, 0x20))) { validationData := 1 }
+            // If ecrecover doesn't match `user`, `validationData` is `1`, else `0`.
+            if xor(usr, mload(staticcall(gas(), 0x01, 0x00, 0x80, 0x01, 0x20))) {
+                validationData := 1
+            }
             mstore(0x40, m) // Restore the free memory pointer.
+            // Refund the `entryPoint` if any relayer gas is owed.
+            pop(call(gas(), caller(), missingAccountFunds, 0x00, 0x00, 0x00, 0x00))
         }
     }
 
