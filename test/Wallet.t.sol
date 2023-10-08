@@ -202,13 +202,22 @@ contract WalletTest is Test {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    function toEthSignedMessageHash(bytes32 hash) internal pure returns (bytes32 result) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            mstore(0x20, hash) // Store into scratch space for keccak256.
+            mstore(0x00, '\x00\x00\x00\x00\x19Ethereum Signed Message:\n32') // 28 bytes.
+            result := keccak256(0x04, 0x3c) // `32 * 2 - (32 - 28) = 60 = 0x3c`.
+        }
+    }
+
     function createUserOp(uint pK, uint192 key)
         internal
         view
         returns (Wallet.UserOperation memory userOp)
     {
         userOp.sender = address(w);
-        userOp.nonce = 0; //IEntryPoint(entryPoint).getNonce(userOp.sender, key);
+        userOp.nonce = IEntryPoint(entryPoint).getNonce(userOp.sender, key);
         // Null most.
         userOp.initCode;
         userOp.callData;
@@ -218,12 +227,41 @@ contract WalletTest is Test {
         userOp.maxFeePerGas;
         userOp.maxPriorityFeePerGas;
         userOp.paymasterAndData;
-        userOp.signature = sign(pK, IEntryPoint(entryPoint).getUserOpHash(userOp));
+        userOp.signature =
+            sign(pK, toEthSignedMessageHash(IEntryPoint(entryPoint).getUserOpHash(userOp)));
+    }
+
+    function createUserOpPermission(uint pK, uint192)
+        internal
+        view
+        returns (Wallet.UserOperation memory userOp)
+    {
+        userOp.sender = address(w);
+        userOp.nonce = uint(bobHash);
+        // Null most.
+        userOp.initCode;
+        userOp.callData = abi.encodeWithSignature('execute(address,uint,bytes)', bob, 0, '');
+        userOp.callGasLimit;
+        userOp.verificationGasLimit;
+        userOp.preVerificationGas;
+        userOp.maxFeePerGas;
+        userOp.maxPriorityFeePerGas;
+        userOp.paymasterAndData;
+        userOp.signature = sign(pK, toEthSignedMessageHash(bobHash));
     }
 
     function testValidateUserOp() public payable {
         // Success case.
         Wallet.UserOperation memory userOp = createUserOp(aliceKey, 0);
+        bytes32 userOpHash = IEntryPoint(entryPoint).getUserOpHash(userOp);
+
+        vm.prank(entryPoint); // Call as EP and check valid.
+        assertEq(w.validateUserOp(userOp, userOpHash, 0), 0); // Return `0` for valid.
+    }
+
+    function testValidateUserOpPermission() public payable {
+        // Success case.
+        Wallet.UserOperation memory userOp = createUserOpPermission(aliceKey, 0);
         bytes32 userOpHash = IEntryPoint(entryPoint).getUserOpHash(userOp);
 
         vm.prank(entryPoint); // Call as EP and check valid.
