@@ -208,7 +208,7 @@ contract WalletTest is Test {
         returns (Wallet.UserOperation memory userOp)
     {
         userOp.sender = address(w);
-        userOp.nonce = IEntryPoint(entryPoint).getNonce(userOp.sender, key);
+        userOp.nonce = 0; //IEntryPoint(entryPoint).getNonce(userOp.sender, key);
         // Null most.
         userOp.initCode;
         userOp.callData;

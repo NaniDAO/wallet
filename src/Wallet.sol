@@ -61,18 +61,47 @@ contract Wallet {
         bytes signature;
     }
 
-    function validateUserOp(
-        UserOperation calldata userOp,
-        bytes32 userOpHash,
-        uint missingAccountFunds
-    ) public payable returns (uint validationData) {
-        bytes calldata sig = userOp.signature;
+    // 0. 4 bytes - function sig
+    // 1. 32 bytes - userOp offset
+    // 2. 32 bytes - userOpHash
+    // 3. 32 bytes - missingAccountFunds
+    // 4. 32 bytes - sender
+    // 5. 32 bytes - nonce
+    // 6. 32 bytes - initCode offset
+    // 7. 32 bytes - callData offset
+    // 8. 32 bytes - callGasLimit
+    // 9. 32 bytes - verificationGasLimit
+    // 10. 32 bytes - preVerificationGas
+    // 11. 32 bytes - maxFeePerGas
+    // 12. 32 bytes - maxPriorityFeePerGas
+    // 13. 32 bytes - paymasterAndData offset
+    // 14. 32 bytes - signature offset
+    // 15. 32 bytes - initCode length
+    // 16. [initCode length] bytes - initCode
+    // 17. 32 bytes - callData length
+    // 18. [callData length] bytes - callData
+    // 19. 32 bytes - paymasterAndData length
+    // 20. [signature length] bytes - paymasterAndData
+    // 21. 32 bytes - signature length
+    // 22. [signature length] bytes - signature
+
+    function validateUserOp(UserOperation calldata, bytes32 userOpHash, uint missingAccountFunds)
+        public
+        payable
+        returns (uint validationData)
+    {
         bytes32 usr = user;
         assembly ("memory-safe") {
             if xor(caller(), entryPoint) { revert(0x00, 0x00) }
             let m := mload(0x40)
+            if calldataload(0x84) {
+                userOpHash := shr(96, calldataload(0x84))
+                if xor(userOpHash, calldataload(add(calldataload(0xe0), 0x24))) {
+                    validationData := 1
+                }
+            }
             mstore(0x00, userOpHash)
-            calldatacopy(0x20, sig.offset, sig.length)
+            calldatacopy(0x20, sub(calldatasize(), 0x60), 0x60)
             if xor(usr, mload(staticcall(gas(), 0x01, 0x00, 0x80, 0x01, 0x20))) {
                 validationData := 1
             }
