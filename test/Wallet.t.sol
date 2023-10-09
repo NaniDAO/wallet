@@ -94,10 +94,10 @@ contract WalletTest is Test {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    function testExecuteDelegatecall() public payable {
-        vm.prank(entryPoint);
-        w.execute(bob, abi.encodeWithSignature('foo()'));
-    }
+    //function testExecuteDelegatecall() public payable {
+    //    vm.prank(entryPoint);
+    //    w.execute(bob, abi.encodeWithSignature('foo()'));
+    //}
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -231,23 +231,86 @@ contract WalletTest is Test {
             sign(pK, toEthSignedMessageHash(IEntryPoint(entryPoint).getUserOpHash(userOp)));
     }
 
-    function createUserOpPermission(uint pK, uint192)
+    enum Type {
+        Address,
+        Uint256,
+        Uint8,
+        Bytes32,
+        Bytes,
+        String
+    }
+
+    struct Param {
+        Type pType;
+        uint pSlot;
+        bytes value;
+    }
+
+    struct Permit {
+        address target;
+        bytes4 selector;
+        uint32 validAfter;
+        uint32 validUntil;
+        uint maxValue;
+        Param[] params;
+    }
+
+    function createUserOpPermission(uint pK, uint192 key)
         internal
         view
         returns (Wallet.UserOperation memory userOp)
     {
         userOp.sender = address(w);
-        userOp.nonce = uint(bobHash);
-        // Null most.
+
+        // nonceKey (192) - validator address (160) and hashId (32)
+        userOp.nonce = uint(bobHash);//IEntryPoint(entryPoint).getNonce(
+            //userOp.sender, uint192(bytes24(abi.encodePacked(bob, key)))
+        //);
         userOp.initCode;
-        userOp.callData = abi.encodeWithSignature('execute(address,uint,bytes)', bob, 0, '');
+
+        Param[] memory nullParam = new Param[](1);
+        nullParam[0].pType = Type.Address;
+        nullParam[0].pSlot = 0;
+        nullParam[0].value = abi.encode(address(0));
+
+        userOp.callData = abi.encodeWithSignature(
+            'execute(address,uint,bytes)',
+            bob,
+            0,
+            abi.encodeWithSignature(
+                'validateUserPermit(bytes32,Permit)',
+                bytes32(userOp.nonce),
+                Permit(
+                    address(erc20),
+                    MockERC20.transfer.selector,
+                    0,
+                    type(uint32).max,
+                    0.5 ether,
+                    nullParam
+                )
+            )
+        );
+
+        /*function validateUserPermit(bytes32 permitHash, bytes signature,Permit permit) {
+            // create permitHash from Permit 
+            // check permitHash === permitHashCreatedOnTheContract
+            // ecrecover owner from signed permit 
+            // if owner and permit is valid
+            // check specific permit params
+            // is between timestamp validUntil validAfter 
+            // call.to === permit.target
+            // call.value <= permit.maxValue
+            // if call permitted - 
+            // execute call 
+        }*/
+
         userOp.callGasLimit;
         userOp.verificationGasLimit;
         userOp.preVerificationGas;
         userOp.maxFeePerGas;
         userOp.maxPriorityFeePerGas;
         userOp.paymasterAndData;
-        userOp.signature = sign(pK, toEthSignedMessageHash(bobHash));
+        userOp.signature = sign(pK, toEthSignedMessageHash(bytes32(userOp.nonce)));
     }
 
     function testValidateUserOp() public payable {
