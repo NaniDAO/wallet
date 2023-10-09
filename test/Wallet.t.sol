@@ -255,7 +255,7 @@ contract WalletTest is Test {
         Param[] params;
     }
 
-    function createUserOpPermission(uint pK, uint192 key)
+    function createUserOpPermission(uint pK, uint192)
         internal
         view
         returns (Wallet.UserOperation memory userOp)
@@ -263,7 +263,7 @@ contract WalletTest is Test {
         userOp.sender = address(w);
 
         // nonceKey (192) - validator address (160) and hashId (32)
-        userOp.nonce = uint(bobHash);//IEntryPoint(entryPoint).getNonce(
+        userOp.nonce = uint(bobHash); //IEntryPoint(entryPoint).getNonce(
             //userOp.sender, uint192(bytes24(abi.encodePacked(bob, key)))
         //);
         userOp.initCode;
