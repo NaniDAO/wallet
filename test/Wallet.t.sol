@@ -153,7 +153,7 @@ contract WalletTest is Test {
 
     function testIsValidSignature() public payable {
         bytes32 hash = keccak256(abi.encodePacked('foo()'));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, hash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, toEthSignedMessageHash(hash));
         // ABI encode hash and sig as expected by isValidSignature() / eip-1271.
         bytes memory data = abi.encodeWithSelector(0x1626ba7e, hash, abi.encode(v, r, s));
         (, bytes memory ret) = address(w).staticcall(data);
@@ -261,18 +261,13 @@ contract WalletTest is Test {
         returns (Wallet.UserOperation memory userOp)
     {
         userOp.sender = address(w);
-
-        // nonceKey (192) - validator address (160) and hashId (32)
-        userOp.nonce = uint(bobHash); //IEntryPoint(entryPoint).getNonce(
-            //userOp.sender, uint192(bytes24(abi.encodePacked(bob, key)))
-        //);
+        userOp.nonce = uint(bobHash); // Put Bob as Sig Aggregator.
         userOp.initCode;
-
+        // Build Dummy Permit.
         Param[] memory nullParam = new Param[](1);
         nullParam[0].pType = Type.Address;
         nullParam[0].pSlot = 0;
         nullParam[0].value = abi.encode(address(0));
-
         userOp.callData = abi.encodeWithSignature(
             'execute(address,uint,bytes)',
             bob,
@@ -290,8 +285,18 @@ contract WalletTest is Test {
                 )
             )
         );
+        // Leave rest Null.
+        userOp.callGasLimit;
+        userOp.verificationGasLimit;
+        userOp.preVerificationGas;
+        userOp.maxFeePerGas;
+        userOp.maxPriorityFeePerGas;
+        userOp.paymasterAndData;
+        userOp.signature =
+            sign(pK, toEthSignedMessageHash(IEntryPoint(entryPoint).getUserOpHash(userOp)));
+    }
 
-        /*function validateUserPermit(bytes32 permitHash, bytes signature,Permit permit) {
+    /*function validateUserPermit(bytes32 permitHash, bytes signature,Permit permit) {
             // create permitHash from Permit 
             // check permitHash === permitHashCreatedOnTheContract
             // ecrecover owner from signed permit 
@@ -303,15 +308,6 @@ contract WalletTest is Test {
             // if call permitted - 
             // execute call 
         }*/
-
-        userOp.callGasLimit;
-        userOp.verificationGasLimit;
-        userOp.preVerificationGas;
-        userOp.maxFeePerGas;
-        userOp.maxPriorityFeePerGas;
-        userOp.paymasterAndData;
-        userOp.signature = sign(pK, toEthSignedMessageHash(bytes32(userOp.nonce)));
-    }
 
     function testValidateUserOp() public payable {
         // Success case.
@@ -328,7 +324,7 @@ contract WalletTest is Test {
         bytes32 userOpHash = IEntryPoint(entryPoint).getUserOpHash(userOp);
 
         vm.prank(entryPoint); // Call as EP and check valid.
-        assertEq(w.validateUserOp(userOp, userOpHash, 0), 0); // Return `0` for valid.
+        assertEq(w.validateUserOp(userOp, userOpHash, 0), uint(bobHash)); // Return `bobHash` for valid.
     }
 
     function testBadValidateUserOp() public payable {
