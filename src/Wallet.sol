@@ -39,7 +39,7 @@ contract Wallet {
             // If ecrecover succeeds, return ERC1271 magic value `0x1626ba7e`.
             if eq(usr, mload(staticcall(gas(), 0x01, 0x00, 0x80, 0x01, 0x20))) {
                 mstore(0x00, 0x1626ba7e) // Place magic value into memory.
-                return(0x1C, 0x04) // Return to caller. Failure is null.
+                return(0x1C, 0x04) // Return magic value. Failure is null.
             }
         }
     }
@@ -65,8 +65,14 @@ contract Wallet {
     {
         bytes32 usr = user; // Place immutable `user` onto stack.
         assembly ("memory-safe") {
-            if xor(caller(), entryPoint) { revert(0x00, 0x00) } // Check `entryPoint` auth.
             let m := mload(0x40) // Cache free memory pointer.
+            if xor(caller(), entryPoint) { revert(0x00, 0x00) } // Check `entryPoint` auth.
+            // If `nonce` exceeds 64 bytes, extract signature aggregator as `validationData`.
+            // Since hashed value must be signed by user, it is trusted to validate user ops.
+            if gt(calldataload(0x84), 0xffffffffffffffff) {
+                userOpHash := shr(64, calldataload(0x84))
+                validationData := userOpHash
+            }
             // ERC191 signed data is not supported by EVM, so `userOpHash` prep is manual.
             mstore(0x20, userOpHash) // Store into scratch space for keccak256.
             mstore(0x00, '\x00\x00\x00\x00\x19Ethereum Signed Message:\n32') // 28 bytes.
@@ -75,14 +81,11 @@ contract Wallet {
             if xor(usr, mload(staticcall(gas(), 0x01, 0x00, 0x80, 0x01, 0x20))) {
                 validationData := 1 // If ecrecover fails, `validationData` is 1.
             }
-            // If `nonce` is set, extract sig aggregator in first word.
-            // Since it is signed, it is trusted to validate user ops.
-            if calldataload(0x84) { validationData := calldataload(0x84) }
-            mstore(0x40, m) // Restore free memory pointer.
             // Refund `entryPoint` validation if required.
             if missingAccountFunds {
                 pop(call(gas(), caller(), missingAccountFunds, 0x00, 0x00, 0x00, 0x00))
             }
+            mstore(0x40, m) // Restore free memory pointer.
         }
     }
 
