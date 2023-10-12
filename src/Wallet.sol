@@ -13,7 +13,7 @@ contract Wallet {
         bytes32 usr = user; // Place immutable `user` onto stack.
         assembly ("memory-safe") {
             // Only the `user` or `entryPoint` have auth for executing wallet operations.
-            if and(xor(caller(), usr), xor(caller(), entryPoint)) { revert(0x00, 0x00) }
+            if iszero(or(eq(caller(), usr), eq(caller(), entryPoint))) { revert(0x00, 0x00) }
             calldatacopy(0x00, data.offset, data.length) // Copy call `data` to memory.
             // If `val` is not set to max uint256, perform call operation.
             if xor(val, not(0)) {
