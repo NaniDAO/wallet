@@ -150,6 +150,29 @@ contract WalletTest is Test {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    function testExecuteRevertDoesNotPayETH() public payable {
+        uint balanceBefore = address(w).balance;
+        MockRevertingContractForCalls c = new MockRevertingContractForCalls();
+        vm.prank(entryPoint);
+        // Foo call.
+        w.execute(
+            address(c), 1 ether, abi.encodeWithSelector(MockRevertingContractForCalls.foo.selector)
+        );
+        assertEq(address(w).balance, balanceBefore);
+        // Garbage call.
+        vm.prank(entryPoint);
+        w.execute(address(c), 1 ether, abi.encodeWithSelector(0xdeadbeef));
+        assertEq(address(w).balance, balanceBefore);
+        // Ok call.
+        vm.prank(entryPoint);
+        w.execute(
+            address(c), 1 ether, abi.encodeWithSelector(MockRevertingContractForCalls.ok.selector)
+        );
+        assertEq(address(w).balance, balanceBefore - 1 ether);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     function testIsValidSignature() public payable {
         bytes32 hash = keccak256(abi.encodePacked('foo()'));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, toEthSignedMessageHash(hash));
@@ -377,4 +400,14 @@ interface IEntryPoint {
     function getUserOpHash(Wallet.UserOperation calldata userOp) external view returns (bytes32);
     function handleOps(Wallet.UserOperation[] calldata ops, address payable beneficiary) external;
     function getNonce(address sender, uint192 key) external view returns (uint nonce);
+}
+
+contract MockRevertingContractForCalls {
+    function foo() public payable {
+        revert('foo');
+    }
+
+    function ok() public payable returns (string memory) {
+        return 'ok';
+    }
 }
