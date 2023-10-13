@@ -46,16 +46,16 @@ contract Wallet {
 
     struct UserOperation {
         address sender;
-        uint nonce; // 0x84
-        bytes initCode; // skippable
-        bytes callData; // 0x208
+        uint nonce;
+        bytes initCode;
+        bytes callData;
         uint callGasLimit;
         uint verificationGasLimit;
         uint preVerificationGas;
         uint maxFeePerGas;
         uint maxPriorityFeePerGas;
         bytes paymasterAndData;
-        bytes signature; // sub(calldatasize(), 0x60)
+        bytes signature;
     }
 
     function validateUserOp(UserOperation calldata, bytes32 userOpHash, uint missingAccountFunds)
