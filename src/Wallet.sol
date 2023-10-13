@@ -28,36 +28,6 @@ contract Wallet {
         }
     }
 
-    function isValidSignature(bytes32 hash, bytes calldata signature) public view {
-        bytes32 usr = user; // Place immutable `user` onto stack.
-        assembly ("memory-safe") {
-            // ERC191 signed data is not supported by EVM, so `hash` prep is manual.
-            mstore(0x20, hash) // Store into scratch space for keccak256.
-            mstore(0x00, '\x00\x00\x00\x00\x19Ethereum Signed Message:\n32') // 28 bytes.
-            mstore(0x00, keccak256(0x04, 0x3c)) // `32 * 2 - (32 - 28) = 60 = 0x3c`.
-            calldatacopy(0x20, signature.offset, signature.length) // Copy `v, r, s`.
-            // If ecrecover succeeds, return ERC1271 magic value `0x1626ba7e`.
-            if eq(usr, mload(staticcall(gas(), 0x01, 0x00, 0x80, 0x01, 0x20))) {
-                mstore(0x00, 0x1626ba7e) // Place magic value into memory.
-                return(0x1C, 0x04) // Return magic value. Failure is null.
-            }
-        }
-    }
-
-    struct UserOperation {
-        address sender;
-        uint nonce;
-        bytes initCode;
-        bytes callData;
-        uint callGasLimit;
-        uint verificationGasLimit;
-        uint preVerificationGas;
-        uint maxFeePerGas;
-        uint maxPriorityFeePerGas;
-        bytes paymasterAndData;
-        bytes signature;
-    }
-
     function validateUserOp(UserOperation calldata, bytes32 userOpHash, uint missingAccountFunds)
         public
         payable
@@ -89,6 +59,22 @@ contract Wallet {
         }
     }
 
+    function isValidSignature(bytes32 hash, bytes calldata signature) public payable {
+        bytes32 usr = user; // Place immutable `user` onto stack.
+        assembly ("memory-safe") {
+            // ERC191 signed data is not supported by EVM, so `hash` prep is manual.
+            mstore(0x20, hash) // Store into scratch space for keccak256.
+            mstore(0x00, '\x00\x00\x00\x00\x19Ethereum Signed Message:\n32') // 28 bytes.
+            mstore(0x00, keccak256(0x04, 0x3c)) // `32 * 2 - (32 - 28) = 60 = 0x3c`.
+            calldatacopy(0x20, signature.offset, signature.length) // Copy `v, r, s`.
+            // If ecrecover succeeds, return ERC1271 magic value `0x1626ba7e`.
+            if eq(usr, mload(staticcall(gas(), 0x01, 0x00, 0x80, 0x01, 0x20))) {
+                mstore(0x00, 0x1626ba7e) // Place magic value into memory.
+                return(0x1C, 0x04) // Return magic value. Failure is null.
+            }
+        }
+    }
+
     fallback() external payable {
         assembly ("memory-safe") {
             // If `msg.value` is set, `receive()`.
@@ -97,5 +83,19 @@ contract Wallet {
             mstore(0x20, shr(224, calldataload(0)))
             return(0x3C, 0x20)
         }
+    }
+
+    struct UserOperation {
+        address sender;
+        uint nonce;
+        bytes initCode;
+        bytes callData;
+        uint callGasLimit;
+        uint verificationGasLimit;
+        uint preVerificationGas;
+        uint maxFeePerGas;
+        uint maxPriorityFeePerGas;
+        bytes paymasterAndData;
+        bytes signature;
     }
 }
