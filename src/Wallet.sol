@@ -17,12 +17,12 @@ contract Wallet {
             calldatacopy(0x00, data.offset, data.length) // Copy call `data` to memory.
             // If `val` is not set to max uint256, perform call operation.
             if xor(val, not(0)) {
-                pop(call(gas(), to, val, 0x00, data.length, 0x00, 0x00))
+                pop(call(gas(), to, val, 0x00, data.length, codesize(), 0x00))
                 returndatacopy(0x00, 0x00, returndatasize())
                 return(0x00, returndatasize())
             }
             // Otherwise, delegate the call `data` operation for `to`.
-            pop(delegatecall(gas(), to, 0x00, data.length, 0x00, 0x00))
+            pop(delegatecall(gas(), to, 0x00, data.length, codesize(), 0x00))
             returndatacopy(0x00, 0x00, returndatasize())
             return(0x00, returndatasize())
         }
@@ -83,7 +83,7 @@ contract Wallet {
             }
             // Refund `entryPoint` validation if required.
             if missingAccountFunds {
-                pop(call(gas(), caller(), missingAccountFunds, 0x00, 0x00, 0x00, 0x00))
+                pop(call(gas(), caller(), missingAccountFunds, codesize(), 0x00, codesize(), 0x00))
             }
             mstore(0x40, m) // Restore free memory pointer.
         }
