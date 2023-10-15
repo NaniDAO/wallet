@@ -59,7 +59,11 @@ contract Wallet {
         }
     }
 
-    function isValidSignature(bytes32 hash, bytes calldata signature) public payable {
+    function isValidSignature(bytes32 hash, bytes calldata signature)
+        public
+        payable
+        returns (bytes4 magicValue)
+    {
         bytes32 usr = user; // Place immutable `user` onto stack.
         assembly ("memory-safe") {
             // ERC191 signed data is not supported by EVM, so `hash` prep is manual.
@@ -69,8 +73,7 @@ contract Wallet {
             calldatacopy(0x20, signature.offset, signature.length) // Copy `v, r, s`.
             // If ecrecover succeeds, return ERC1271 magic value `0x1626ba7e`.
             if eq(usr, mload(staticcall(gas(), 0x01, 0x00, 0x80, 0x01, 0x20))) {
-                mstore(0x00, 0x1626ba7e) // Place magic value into memory.
-                return(0x1C, 0x04) // Return magic value. Failure is null.
+                magicValue := 0x1626ba7e
             }
         }
     }

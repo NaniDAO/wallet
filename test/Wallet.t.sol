@@ -175,16 +175,8 @@ contract WalletTest is Test {
 
     function testIsValidSignature() public payable {
         bytes32 hash = keccak256(abi.encodePacked('foo()'));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, toEthSignedMessageHash(hash));
-        // ABI encode hash and sig as expected by isValidSignature() / eip-1271.
-        bytes memory data = abi.encodeWithSelector(0x1626ba7e, hash, abi.encode(v, r, s));
-        (, bytes memory ret) = address(w).staticcall(data);
-
-        bytes4 selector; // Slice selector return.
-        assembly {
-            selector := mload(add(ret, 0x20))
-        }
-
+        bytes memory sig = sign(aliceKey, toEthSignedMessageHash(hash));
+        bytes4 selector = w.isValidSignature(hash, sig);
         assert(selector == 0x1626ba7e); // Check match.
     }
 
