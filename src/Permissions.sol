@@ -122,37 +122,20 @@ contract Permissions is EIP712 {
                     return false;
                 } else if (param._type == TYPE.UINT8) {
                     console.log(i, 'param is uint8');
-                    uint8[] memory allowed = new uint8[](param.bounds.length/32);
-                    for (uint j; j < param.bounds.length / 32; j++) {
-                        allowed[j] = abi.decode(param.bounds[j * 32:j * 32 + 32], (uint8));
-                        console.log('allowed', uint256(allowed[j]));
-                    }
-                    // (uint8[] memory allowed) = abi.decode(param.bounds[0:32], (uint8[]));
-                    // console2.log(uint256(allowed));
-                    uint8 value = abi.decode(call.data[param.offset:param.offset + 32], (uint8));
-                    console.log(uint256(value));
-                    for (uint j; j < allowed.length; j++) {
-                        if (allowed[j] == value) break;
-                        if (j == allowed.length - 1) return false;
-                    }
+                    if (_validateEnum(abi.decode(call.data[param.offset:param.offset + 32], (uint)), param.bounds)) break;
+                    return false;
                 } else if (param._type == TYPE.INT) {
                     console.log(i, 'param is int');
-                    (int min, int max) = abi.decode(param.bounds, (int, int));
-                    int value = abi.decode(call.data[param.offset:param.offset + 32], (int));
-                    if (value > max || value < min) return false;
+                    if (_validateInt(abi.decode(call.data[param.offset:param.offset + 32], (int)), param.bounds)) break;
+                    return false;
                 } else if (param._type == TYPE.ADDRESS) {
                     console.log(i, 'param is address');
-                    address value = abi.decode(call.data[param.offset:param.offset + 32], (address));
-                    console.logAddress(value);
-                    bool valid = _validateAddress(value, param.bounds);
-                    if (valid) break;
+                    if (_validateAddress(abi.decode(call.data[param.offset:param.offset + 32], (address)), param.bounds)) break;
                     return false;
                 } else if (param._type == TYPE.BOOL) {
                     console.log(i, 'param is bool');
-                    bool bound = abi.decode(param.bounds, (bool));
-                    bytes calldata data = bytes(call.data[param.offset:param.offset + 32]);
-                    bool value = abi.decode(data, (bool));
-                    if (bound != value) return false;
+                    if (_validateBool(abi.decode(call.data[param.offset:param.offset + 32], (bool)), param.bounds)) break;
+                    return false;
                 }
                 // else if (param._type == TYPE.BYTES) {
                 //     bytes memory bound = abi.decode(param.bounds, (bytes));
@@ -191,6 +174,15 @@ contract Permissions is EIP712 {
         return found;
     }
 
+    function _validateInt(int value, bytes memory bounds)
+        internal
+        pure
+        returns (bool found)
+    {
+        (int min, int max) = abi.decode(bounds, (int, int));
+        return value >= min && value <= max;
+    }
+
     function _validateAddress(address value, bytes memory bounds)
         internal
         view
@@ -200,5 +192,13 @@ contract Permissions is EIP712 {
         LibSort.sort(bound);
         (found,) = LibSort.searchSorted(bound, value);
         return found;
+    }
+
+    function _validateBool(bool value, bytes memory bounds)
+        internal
+        pure
+        returns (bool)
+    {
+        return value == abi.decode(bounds, (bool));
     }
 }

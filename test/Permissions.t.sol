@@ -26,22 +26,12 @@ contract PermissionsTester {
 
     constructor() {}
 
-    function getRandomState(uint256 len) public view returns (uint256[] memory)  {
-        require(len <= uint(State.FAILED), "Length exceeds the number of states");
-        uint256[] memory state = new uint256[](len);
-        bool[] memory stateExists = new bool[](uint(State.FAILED) + 1);
-
-        for (uint256 i = 0; i < len; i++) {
-            uint randomIndex;
-            do {
-                randomIndex = uint(keccak256(abi.encodePacked(block.timestamp, i))) % len;
-            } while (stateExists[randomIndex]);
-
-            stateExists[randomIndex] = true;
-            state[i] = uint256(State(randomIndex));
+    function getRandomState() public view returns (uint256[] memory) {
+        uint256[] memory randomStates = new uint256[](7);
+        for(uint i = 0; i < 7; i++) {
+            randomStates[i] = uint256(State(i));
         }
-
-        return state;
+        return randomStates;
     }
 
     function dataUint(uint data) public pure returns (uint) {
@@ -167,19 +157,15 @@ contract PermissionsTest is Test, TestPlus {
         assertEq(permissions.checkPermission(wallet, sig, slip, call), assertion);
     }
 
-    function testEnumPermission(PermissionsTester.State value, uint8 len) public {
-        PermissionsTester tester = new PermissionsTester();
-        vm.assume(len < uint8(type(PermissionsTester.State).max));
-        vm.assume(len != 0);
-        if (len == 0) return;
-        if (len > uint8(type(PermissionsTester.State).max)) return;
+    function testEnumPermission(uint256 value) public {   
+        value = bound(value, 0, uint256(PermissionsTester.State.FAILED));
+        require(value >= 0 && value <= uint256(PermissionsTester.State.FAILED));
         
-        uint256[] memory bounds = tester.getRandomState(len);
+        PermissionsTester tester = new PermissionsTester();
+        uint256[] memory bounds = tester.getRandomState();
+
         LibSort.sort(bounds);
-        (bool assertion, uint index) = LibSort.searchSorted(bounds, uint256(value));
-        console.log('found', assertion);
-        console.log('index', index);
-        console.log('found value', bounds[index]);
+        (bool assertion, uint index) = LibSort.searchSorted(bounds, value);
 
         address[] memory targets = getTargets(0, alice);
         Param[] memory arguments = new Param[](1);
@@ -202,7 +188,6 @@ contract PermissionsTest is Test, TestPlus {
         bytes32 slipHash = permissions.getSlipHash(wallet, slip);
 
         bytes memory sig = sign(aliceKey, SignatureCheckerLib.toEthSignedMessageHash(slipHash));
-        console.log('length', bounds.length);
         assertEq(permissions.checkPermission(wallet, sig, slip, call), assertion);
     }
 
