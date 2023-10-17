@@ -26,6 +26,24 @@ contract PermissionsTester {
 
     constructor() {}
 
+    function getRandomState(uint256 len) public view returns (uint256[] memory)  {
+        require(len <= uint(State.FAILED), "Length exceeds the number of states");
+        uint256[] memory state = new uint256[](len);
+        bool[] memory stateExists = new bool[](uint(State.FAILED) + 1);
+
+        for (uint256 i = 0; i < len; i++) {
+            uint randomIndex;
+            do {
+                randomIndex = uint(keccak256(abi.encodePacked(block.timestamp, i))) % len;
+            } while (stateExists[randomIndex]);
+
+            stateExists[randomIndex] = true;
+            state[i] = uint256(State(randomIndex));
+        }
+
+        return state;
+    }
+
     function dataUint(uint data) public pure returns (uint) {
         return data;
     }
@@ -146,6 +164,45 @@ contract PermissionsTest is Test, TestPlus {
         bytes32 slipHash = permissions.getSlipHash(wallet, slip);
         bytes memory sig = sign(aliceKey, SignatureCheckerLib.toEthSignedMessageHash(slipHash));
 
+        assertEq(permissions.checkPermission(wallet, sig, slip, call), assertion);
+    }
+
+    function testEnumPermission(PermissionsTester.State value, uint8 len) public {
+        PermissionsTester tester = new PermissionsTester();
+        vm.assume(len < uint8(type(PermissionsTester.State).max));
+        vm.assume(len != 0);
+        if (len == 0) return;
+        if (len > uint8(type(PermissionsTester.State).max)) return;
+        
+        uint256[] memory bounds = tester.getRandomState(len);
+        LibSort.sort(bounds);
+        (bool assertion, uint index) = LibSort.searchSorted(bounds, uint256(value));
+        console.log('found', assertion);
+        console.log('index', index);
+        console.log('found value', bounds[index]);
+
+        address[] memory targets = getTargets(0, alice);
+        Param[] memory arguments = new Param[](1);
+        arguments[0] =
+            Param({_type: TYPE.UINT8, offset: 4, bounds: abi.encode(bounds), length: 0});
+
+        Slip memory slip = createSlip(
+            targets,
+            0,
+            tester.dataUint.selector,
+            arguments,
+            5,
+            uint32(block.timestamp),
+            uint32(block.timestamp + 100000)
+        );
+
+        Call memory call =
+            Call({to: alice, value: 0, data: abi.encodeCall(tester.dataUint, (uint(value)))});
+
+        bytes32 slipHash = permissions.getSlipHash(wallet, slip);
+
+        bytes memory sig = sign(aliceKey, SignatureCheckerLib.toEthSignedMessageHash(slipHash));
+        console.log('length', bounds.length);
         assertEq(permissions.checkPermission(wallet, sig, slip, call), assertion);
     }
 

@@ -125,10 +125,12 @@ contract Permissions is EIP712 {
                     uint8[] memory allowed = new uint8[](param.bounds.length/32);
                     for (uint j; j < param.bounds.length / 32; j++) {
                         allowed[j] = abi.decode(param.bounds[j * 32:j * 32 + 32], (uint8));
+                        console.log('allowed', uint256(allowed[j]));
                     }
                     // (uint8[] memory allowed) = abi.decode(param.bounds[0:32], (uint8[]));
                     // console2.log(uint256(allowed));
                     uint8 value = abi.decode(call.data[param.offset:param.offset + 32], (uint8));
+                    console.log(uint256(value));
                     for (uint j; j < allowed.length; j++) {
                         if (allowed[j] == value) break;
                         if (j == allowed.length - 1) return false;
