@@ -24,12 +24,18 @@ contract PermissionsTester {
         FAILED
     }
 
+    struct StaticTuple {
+        address a;
+        uint b;
+        bool c;
+    }
+
     constructor() {}
 
-    function getRandomState() public view returns (uint256[] memory) {
-        uint256[] memory randomStates = new uint256[](7);
-        for(uint i = 0; i < 7; i++) {
-            randomStates[i] = uint256(State(i));
+    function getRandomState() public view returns (uint[] memory) {
+        uint[] memory randomStates = new uint256[](7);
+        for (uint i = 0; i < 7; i++) {
+            randomStates[i] = uint(State(i));
         }
         return randomStates;
     }
@@ -87,7 +93,8 @@ contract PermissionsTest is Test, TestPlus {
             new Param[](0),
             1,
             uint32(block.timestamp),
-            uint32(block.timestamp + 1000)
+            uint32(block.timestamp + 1000),
+            0
         );
         Call memory call = Call({to: alice, value: value, data: ''});
         bytes32 slipHash = permissions.getSlipHash(wallet, slip);
@@ -107,20 +114,14 @@ contract PermissionsTest is Test, TestPlus {
 
         address[] memory targets = getTargets(0, alice);
         Slip memory slip = createSlip(
-            targets,
-            0,
-            bytes4(0),
-            new Param[](0),
-            1,
-            uint32(validAfter),
-            uint32(validUntil)
+            targets, 0, bytes4(0), new Param[](0), 1, uint32(validAfter), uint32(validUntil), 0
         );
         Call memory call = Call({to: alice, value: 0, data: ''});
         bytes32 slipHash = permissions.getSlipHash(wallet, slip);
 
         bytes memory sig = sign(aliceKey, SignatureCheckerLib.toEthSignedMessageHash(slipHash));
-        bool assertion = (validAfter == 0 || block.timestamp >= slip.validAfter) && 
-                          (validUntil == 0 || block.timestamp <= slip.validUntil);
+        bool assertion = (validAfter == 0 || block.timestamp >= slip.validAfter)
+            && (validUntil == 0 || block.timestamp <= slip.validUntil);
         assertEq(permissions.checkPermission(wallet, sig, slip, call), assertion);
     }
 
@@ -146,7 +147,8 @@ contract PermissionsTest is Test, TestPlus {
             arguments,
             5,
             uint32(block.timestamp),
-            uint32(block.timestamp + 100000)
+            uint32(block.timestamp + 100000),
+            0
         );
 
         Call memory call = Call({to: alice, value: 0, data: abi.encodeCall(tester.dataUint, (val))});
@@ -157,20 +159,19 @@ contract PermissionsTest is Test, TestPlus {
         assertEq(permissions.checkPermission(wallet, sig, slip, call), assertion);
     }
 
-    function testEnumPermission(uint256 value) public {   
-        value = bound(value, 0, uint256(PermissionsTester.State.FAILED));
-        require(value >= 0 && value <= uint256(PermissionsTester.State.FAILED));
-        
+    function testEnumPermission(uint value) public {
+        value = bound(value, 0, uint(PermissionsTester.State.FAILED));
+        require(value >= 0 && value <= uint(PermissionsTester.State.FAILED));
+
         PermissionsTester tester = new PermissionsTester();
-        uint256[] memory bounds = tester.getRandomState();
+        uint[] memory bounds = tester.getRandomState();
 
         LibSort.sort(bounds);
         (bool assertion, uint index) = LibSort.searchSorted(bounds, value);
 
         address[] memory targets = getTargets(0, alice);
         Param[] memory arguments = new Param[](1);
-        arguments[0] =
-            Param({_type: TYPE.UINT8, offset: 4, bounds: abi.encode(bounds), length: 0});
+        arguments[0] = Param({_type: TYPE.UINT8, offset: 4, bounds: abi.encode(bounds), length: 0});
 
         Slip memory slip = createSlip(
             targets,
@@ -179,7 +180,8 @@ contract PermissionsTest is Test, TestPlus {
             arguments,
             5,
             uint32(block.timestamp),
-            uint32(block.timestamp + 100000)
+            uint32(block.timestamp + 100000),
+            0
         );
 
         Call memory call =
@@ -190,6 +192,38 @@ contract PermissionsTest is Test, TestPlus {
         bytes memory sig = sign(aliceKey, SignatureCheckerLib.toEthSignedMessageHash(slipHash));
         assertEq(permissions.checkPermission(wallet, sig, slip, call), assertion);
     }
+
+    // function testStaticTuple(PermissionsTester.StaticTuple memory s) public {
+    //     PermissionsTester tester = new PermissionsTester();
+    //     address[] memory targets = getTargets(0, alice);
+
+    //     Param[] memory arguments = new Param[](1);
+    //      Param[] memory bounds = new Param[](s.length);
+    //     arguments[0] = Param({
+    //         _type: TYPE.TUPLE,
+    //         offset: 4,
+    //         bounds: abi.encode(),
+    //         length: 3
+    //     });
+
+    //     Slip memory slip = createSlip(
+    //         targets,
+    //         0,
+    //         tester.dataUint.selector,
+    //         arguments,
+    //         5,
+    //         uint32(block.timestamp),
+    //         uint32(block.timestamp + 100000)
+    //     );
+
+    //     Call memory call =
+    //         Call({to: alice, value: 0, data: abi.encodeCall(tester.dataUint, (uint(1)))});
+
+    //     bytes32 slipHash = permissions.getSlipHash(wallet, slip);
+
+    //     bytes memory sig = sign(aliceKey, SignatureCheckerLib.toEthSignedMessageHash(slipHash));
+    //     assertEq(permissions.checkPermission(wallet, sig, slip, call), true);
+    // }
 
     // function testCheckTransferPermission() public {
     //     MockERC20 token = new MockERC20("Token", "TKN", 18);
@@ -288,7 +322,8 @@ contract PermissionsTest is Test, TestPlus {
             arguments,
             5,
             uint32(block.timestamp),
-            uint32(block.timestamp + 100000)
+            uint32(block.timestamp + 100000),
+            0
         );
         Call memory call =
             Call({to: alice, value: 0, data: abi.encodeCall(tester.dataBool, (value))});
@@ -324,7 +359,8 @@ contract PermissionsTest is Test, TestPlus {
             arguments,
             5,
             uint32(block.timestamp),
-            uint32(block.timestamp + 100000)
+            uint32(block.timestamp + 100000),
+            0
         );
 
         Call memory call =
@@ -366,7 +402,8 @@ contract PermissionsTest is Test, TestPlus {
             arguments,
             5,
             uint32(block.timestamp),
-            uint32(block.timestamp + 100000)
+            uint32(block.timestamp + 100000),
+            0
         );
 
         Call memory call =
@@ -385,7 +422,8 @@ contract PermissionsTest is Test, TestPlus {
         Param[] memory arguments,
         uint192 uses,
         uint32 validAfter,
-        uint32 validUntil
+        uint32 validUntil,
+        uint32 interval
     ) public pure returns (Slip memory slip) {
         return Slip({
             targets: targets,
@@ -394,7 +432,8 @@ contract PermissionsTest is Test, TestPlus {
             arguments: arguments,
             uses: uses,
             validUntil: validUntil,
-            validAfter: validAfter
+            validAfter: validAfter,
+            interval: interval
         });
     }
 

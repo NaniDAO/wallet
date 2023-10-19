@@ -24,26 +24,37 @@ enum TYPE
     // bytes: dynamic sized byte sequence
     BYTES,
     // string: dynamic sized unicode string assumed to be UTF-8 encoded.
-    STRING
+    STRING,
+    TUPLE
 }
+// FUNCTION
 // <type>[]: a variable-length array of elements of the given type.
 // (T1,T2,...,Tn): tuple consisting of the types T1, …, Tn, n >= 0
 
 struct Param {
-    TYPE _type;
-    uint8 offset;
-    bytes bounds;
-    uint length;
+    TYPE _type; // type of the parameter
+    uint8 offset; // location of the parameter in the calldata
+    // the true location in calldata for dynamic types like bytes, string,
+    uint length; // in case of bytes, string arrays, tuples, the length of the type
+    bytes bounds; // rules for this parameter type
+        // tuple - encode Params[]
+}
+
+struct Span {
+    uint32 validAfter;
+    uint32 validUntil;
 }
 
 struct Slip {
     address[] targets;
     uint maxValue;
     bytes4 selector;
+    // uint128 uses;
+    // uint32 interval;
+    // uint32 validAfter;
+    // uint32 validUntil;
+    Span[] spans;
     Param[] arguments;
-    uint192 uses;
-    uint32 validAfter;
-    uint32 validUntil;
 }
 
 struct Call {
@@ -57,7 +68,7 @@ struct Call {
  * @dev Permissions contract
  */
 contract Permissions is EIP712 {
-    mapping(bytes32 slipHash => uint uses) public slipUses;
+    mapping(bytes32 slipHash => uint use) public use;
 
     function _domainNameAndVersion()
         internal
@@ -89,14 +100,23 @@ contract Permissions is EIP712 {
             return false;
         }
 
-        // check if slip is used up after increment
         unchecked {
-            if (slip.uses == slipUses[slipHash]++) return false;
+            if (
+                slip.spans[use[slipHash]].validAfter != 0
+                    && block.timestamp < slip.spans[use[slipHash]].validAfter
+            ) return false;
+            if (
+                slip.spans[use[slipHash]].validUntil != 0
+                    && block.timestamp > slip.spans[use[slipHash]].validUntil
+            ) return false;
+            use[slipHash]++;
         }
 
         // check if slip is within valid time bounds or infinite
-        if ((slip.validAfter != 0 && block.timestamp < slip.validAfter) || 
-            (slip.validUntil != 0 && block.timestamp > slip.validUntil)) return false;
+        if (
+            (slip.validAfter != 0 && block.timestamp < slip.validAfter)
+                || (slip.validUntil != 0 && block.timestamp > slip.validUntil)
+        ) return false;
 
         // check if call target is authorized
         unchecked {
@@ -118,23 +138,48 @@ contract Permissions is EIP712 {
                 Param calldata param = slip.arguments[i];
 
                 if (param._type == TYPE.UINT) {
-                    if (_validateUint(abi.decode(call.data[param.offset:param.offset + 32], (uint)), param.bounds)) break;
+                    if (
+                        _validateUint(
+                            abi.decode(call.data[param.offset:param.offset + 32], (uint)),
+                            param.bounds
+                        )
+                    ) break;
                     return false;
                 } else if (param._type == TYPE.UINT8) {
                     console.log(i, 'param is uint8');
-                    if (_validateEnum(abi.decode(call.data[param.offset:param.offset + 32], (uint)), param.bounds)) break;
+                    if (
+                        _validateEnum(
+                            abi.decode(call.data[param.offset:param.offset + 32], (uint)),
+                            param.bounds
+                        )
+                    ) break;
                     return false;
                 } else if (param._type == TYPE.INT) {
                     console.log(i, 'param is int');
-                    if (_validateInt(abi.decode(call.data[param.offset:param.offset + 32], (int)), param.bounds)) break;
+                    if (
+                        _validateInt(
+                            abi.decode(call.data[param.offset:param.offset + 32], (int)),
+                            param.bounds
+                        )
+                    ) break;
                     return false;
                 } else if (param._type == TYPE.ADDRESS) {
                     console.log(i, 'param is address');
-                    if (_validateAddress(abi.decode(call.data[param.offset:param.offset + 32], (address)), param.bounds)) break;
+                    if (
+                        _validateAddress(
+                            abi.decode(call.data[param.offset:param.offset + 32], (address)),
+                            param.bounds
+                        )
+                    ) break;
                     return false;
                 } else if (param._type == TYPE.BOOL) {
                     console.log(i, 'param is bool');
-                    if (_validateBool(abi.decode(call.data[param.offset:param.offset + 32], (bool)), param.bounds)) break;
+                    if (
+                        _validateBool(
+                            abi.decode(call.data[param.offset:param.offset + 32], (bool)),
+                            param.bounds
+                        )
+                    ) break;
                     return false;
                 }
                 // else if (param._type == TYPE.BYTES) {
@@ -148,6 +193,11 @@ contract Permissions is EIP712 {
 
                 //     if (bound != value) return false;
                 // }
+                else if (param._type == TYPE.TUPLE) {
+                    console.log(i, 'param is tuple');
+                    if (_validateTuple(call.data, param.bounds, param.offset, param.length)) break;
+                    return false;
+                }
             }
         }
 
@@ -158,27 +208,19 @@ contract Permissions is EIP712 {
         return _hashTypedData(keccak256(abi.encode(wallet, slip)));
     }
 
-    function _validateUint(uint value, bytes memory bounds)
-        internal
-        pure
-        returns (bool found)
-    {
+    function _validateUint(uint value, bytes memory bounds) internal pure returns (bool found) {
         (uint min, uint max) = abi.decode(bounds, (uint, uint));
         return value >= min && value <= max;
     }
 
-    function _validateEnum(uint256 value, bytes memory bounds) internal pure returns (bool found) {
-        (uint256[] memory bound) = abi.decode(bounds, (uint256[]));
+    function _validateEnum(uint value, bytes memory bounds) internal pure returns (bool found) {
+        (uint[] memory bound) = abi.decode(bounds, (uint[]));
         LibSort.sort(bound);
         (found,) = LibSort.searchSorted(bound, value);
         return found;
     }
 
-    function _validateInt(int value, bytes memory bounds)
-        internal
-        pure
-        returns (bool found)
-    {
+    function _validateInt(int value, bytes memory bounds) internal pure returns (bool found) {
         (int min, int max) = abi.decode(bounds, (int, int));
         return value >= min && value <= max;
     }
@@ -194,11 +236,13 @@ contract Permissions is EIP712 {
         return found;
     }
 
-    function _validateBool(bool value, bytes memory bounds)
+    function _validateBool(bool value, bytes memory bounds) internal pure returns (bool) {
+        return value == abi.decode(bounds, (bool));
+    }
+
+    function _validateTuple(bytes memory data, bytes memory bounds, uint8 offset, uint length)
         internal
         pure
         returns (bool)
-    {
-        return value == abi.decode(bounds, (bool));
-    }
+    {}
 }
