@@ -9,6 +9,13 @@ import {LibSort} from '@solady/src/utils/LibSort.sol';
 
 import '@forge/Test.sol';
 
+/*
+Examples
+- Send 0.1 ETH to 0x1234...5678 at any time but not after 2024-01-01.
+- Swap between 1-2 WETH for DAI every 3 days.
+- Vote no on every proposal 
+*/
+
 enum TYPE
 // uint<M>: unsigned integer type of M bits, 0 < M <= 256, M % 8 == 0
 {
@@ -87,11 +94,8 @@ contract Permissions is EIP712 {
         Call calldata call
     ) public returns (bool) {
         require(slip.targets.length != 0, 'Permissions: no targets');
-        require(slip.uses != 0, 'Permissions: no uses');
-        require(
-            slip.validAfter <= slip.validUntil,
-            'Permissions: validAfter must be less than or equal to validUntil'
-        );
+        require(slip.spans.length != 0, 'Permissions: no uses');
+      
 
         bytes32 slipHash = getSlipHash(wallet, slip);
         // check if the slip is authorized
@@ -111,12 +115,6 @@ contract Permissions is EIP712 {
             ) return false;
             use[slipHash]++;
         }
-
-        // check if slip is within valid time bounds or infinite
-        if (
-            (slip.validAfter != 0 && block.timestamp < slip.validAfter)
-                || (slip.validUntil != 0 && block.timestamp > slip.validUntil)
-        ) return false;
 
         // check if call target is authorized
         unchecked {

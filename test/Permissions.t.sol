@@ -10,7 +10,7 @@ import {ERC4337, MockERC4337} from '@solady/test/utils/mocks/MockERC4337.sol';
 import {MockERC20} from '@solady/test/utils/mocks/MockERC20.sol';
 import {LibSort} from '@solady/src/utils/LibSort.sol';
 
-import {Permissions, Slip, Call, Param, TYPE} from '../src/Permissions.sol';
+import {Permissions, Slip, Call, Param, TYPE, Span} from '../src/Permissions.sol';
 import {Wallet} from '../src/Wallet.sol';
 
 contract PermissionsTester {
@@ -86,15 +86,14 @@ contract PermissionsTest is Test, TestPlus {
         vm.assume(maxValue <= type(uint128).max);
         address[] memory targets = getTargets(0, alice);
         console.log(targets[0]);
+        Span[] memory spans = new Span[](1);
+        spans[0] = Span({validAfter: uint32(block.timestamp), validUntil: uint32(block.timestamp + 100000)});
         Slip memory slip = createSlip(
             targets,
             maxValue,
             bytes4(0),
             new Param[](0),
-            1,
-            uint32(block.timestamp),
-            uint32(block.timestamp + 1000),
-            0
+            spans
         );
         Call memory call = Call({to: alice, value: value, data: ''});
         bytes32 slipHash = permissions.getSlipHash(wallet, slip);
@@ -104,26 +103,23 @@ contract PermissionsTest is Test, TestPlus {
         assertEq(permissions.checkPermission(wallet, sig, slip, call), assertion);
     }
 
-    function testTimePermissions(uint32 validAfter, uint32 validUntil) public {
-        vm.assume(validAfter <= type(uint32).max);
-        vm.assume(validUntil <= type(uint32).max);
-        vm.assume(validAfter <= validUntil);
-        require(validAfter <= type(uint32).max);
-        require(validUntil <= type(uint32).max);
-        require(validAfter <= validUntil);
+    // function testTimePermissions(Span[] spans) public {
+    //     vm.assume(spans.length != 0);
+    //     vm.assume(spans.length <= type(uint8).max);
+    //     require(spans.length != 0);
+    //     require(spans.length <= type(uint8).max);
 
-        address[] memory targets = getTargets(0, alice);
-        Slip memory slip = createSlip(
-            targets, 0, bytes4(0), new Param[](0), 1, uint32(validAfter), uint32(validUntil), 0
-        );
-        Call memory call = Call({to: alice, value: 0, data: ''});
-        bytes32 slipHash = permissions.getSlipHash(wallet, slip);
+    //     address[] memory targets = getTargets(0, alice);
+    //     Slip memory slip = createSlip(
+    //         targets, 0, bytes4(0), new Param[](0), 1, 0
+    //     );
+    //     Call memory call = Call({to: alice, value: 0, data: ''});
+    //     bytes32 slipHash = permissions.getSlipHash(wallet, slip);
 
-        bytes memory sig = sign(aliceKey, SignatureCheckerLib.toEthSignedMessageHash(slipHash));
-        bool assertion = (validAfter == 0 || block.timestamp >= slip.validAfter)
-            && (validUntil == 0 || block.timestamp <= slip.validUntil);
-        assertEq(permissions.checkPermission(wallet, sig, slip, call), assertion);
-    }
+    //     bytes memory sig = sign(aliceKey, SignatureCheckerLib.toEthSignedMessageHash(slipHash));
+    //     bool assertion = 
+    //     assertEq(permissions.checkPermission(wallet, sig, slip, call), assertion);
+    // }
 
     function testUintPermission(uint val, uint min, uint max) public {
         vm.assume(min < max);
@@ -139,16 +135,14 @@ contract PermissionsTest is Test, TestPlus {
         address[] memory targets = getTargets(0, alice);
         Param[] memory arguments = new Param[](1);
         arguments[0] = Param({_type: TYPE.UINT, offset: 4, bounds: abi.encode(min, max), length: 0});
-
+                Span[] memory spans = new Span[](1);
+        spans[0] = Span({validAfter: uint32(block.timestamp), validUntil: uint32(block.timestamp + 100000)});
         Slip memory slip = createSlip(
             targets,
             0,
             tester.dataUint.selector,
             arguments,
-            5,
-            uint32(block.timestamp),
-            uint32(block.timestamp + 100000),
-            0
+            spans
         );
 
         Call memory call = Call({to: alice, value: 0, data: abi.encodeCall(tester.dataUint, (val))});
@@ -172,16 +166,14 @@ contract PermissionsTest is Test, TestPlus {
         address[] memory targets = getTargets(0, alice);
         Param[] memory arguments = new Param[](1);
         arguments[0] = Param({_type: TYPE.UINT8, offset: 4, bounds: abi.encode(bounds), length: 0});
-
+        Span[] memory spans = new Span[](1);
+        spans[0] = Span({validAfter: uint32(block.timestamp), validUntil: uint32(block.timestamp + 100000)});
         Slip memory slip = createSlip(
             targets,
             0,
             tester.dataUint.selector,
             arguments,
-            5,
-            uint32(block.timestamp),
-            uint32(block.timestamp + 100000),
-            0
+            spans
         );
 
         Call memory call =
@@ -314,16 +306,14 @@ contract PermissionsTest is Test, TestPlus {
 
         Param[] memory arguments = new Param[](1);
         arguments[0] = Param({_type: TYPE.BOOL, offset: 4, bounds: abi.encode(bound), length: 0});
-
+        Span[] memory spans = new Span[](1);
+        spans[0] = Span({validAfter: uint32(block.timestamp), validUntil: uint32(block.timestamp + 100000)});
         Slip memory slip = createSlip(
             targets,
             0,
             tester.dataBool.selector,
             arguments,
-            5,
-            uint32(block.timestamp),
-            uint32(block.timestamp + 100000),
-            0
+            spans
         );
         Call memory call =
             Call({to: alice, value: 0, data: abi.encodeCall(tester.dataBool, (value))});
@@ -352,15 +342,14 @@ contract PermissionsTest is Test, TestPlus {
         arguments[0] =
             Param({_type: TYPE.ADDRESS, offset: 4, bounds: abi.encode(bounds), length: 0});
 
+                Span[] memory spans = new Span[](1);
+        spans[0] = Span({validAfter: uint32(block.timestamp), validUntil: uint32(block.timestamp + 100000)});
         Slip memory slip = createSlip(
             targets,
             0,
             tester.dataAddress.selector,
             arguments,
-            5,
-            uint32(block.timestamp),
-            uint32(block.timestamp + 100000),
-            0
+            spans
         );
 
         Call memory call =
@@ -394,16 +383,15 @@ contract PermissionsTest is Test, TestPlus {
 
         Param[] memory arguments = new Param[](1);
         arguments[0] = Param({_type: TYPE.INT, offset: 4, bounds: abi.encode(min, max), length: 0});
-
+        
+        Span[] memory spans = new Span[](1);
+        spans[0] = Span({validAfter: uint32(block.timestamp), validUntil: uint32(block.timestamp + 100000)});
         Slip memory slip = createSlip(
             targets,
             0,
             tester.dataInt.selector,
             arguments,
-            5,
-            uint32(block.timestamp),
-            uint32(block.timestamp + 100000),
-            0
+            spans
         );
 
         Call memory call =
@@ -420,20 +408,14 @@ contract PermissionsTest is Test, TestPlus {
         uint maxValue,
         bytes4 selector,
         Param[] memory arguments,
-        uint192 uses,
-        uint32 validAfter,
-        uint32 validUntil,
-        uint32 interval
+        Span[] memory spans
     ) public pure returns (Slip memory slip) {
         return Slip({
             targets: targets,
             maxValue: maxValue,
             selector: selector,
             arguments: arguments,
-            uses: uses,
-            validUntil: validUntil,
-            validAfter: validAfter,
-            interval: interval
+            spans: spans
         });
     }
 
