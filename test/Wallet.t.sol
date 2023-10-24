@@ -42,10 +42,9 @@ contract WalletTest is Test {
         (bob, bobKey) = makeAddrAndKey('bob');
 
         aliceHash = bytes32(uint(uint160(alice)));
-        bobHash = bytes32(uint(uint160(bob)));
 
         WalletFactory f = new WalletFactory();
-        w = f.deploy(aliceHash);
+        w = f.deploy(alice, bytes32(0));
 
         payable(address(w)).transfer(100 ether); // Send ETH.
 
@@ -62,9 +61,6 @@ contract WalletTest is Test {
         erc721.mint(address(w), 1); // Mint wallet NFT.
         erc721.mint(alice, 2); // Mint usr NFT.
         erc1155.mint(address(w), 1, 1, ''); // Mint wallet ERC1155.
-
-        contractWallet = new MockERC1271Wallet(alice); // Placeholder contract w.
-        contractOwnedW = f.deploy(bytes32(uint(uint160(address(contractWallet)))));
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -96,7 +92,7 @@ contract WalletTest is Test {
 
     function testExecuteDelegatecall() public payable {
         vm.prank(entryPoint);
-        w.execute(bob, abi.encodeWithSignature('foo()'));
+        w.execute(bob, type(uint).max, abi.encodeWithSignature('foo()'));
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -151,9 +147,32 @@ contract WalletTest is Test {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    function testExecuteRevertDoesNotPayETH() public payable {
+        uint balanceBefore = address(w).balance;
+        MockRevertingContractForCalls c = new MockRevertingContractForCalls();
+        vm.prank(entryPoint);
+        // Foo call.
+        w.execute(
+            address(c), 1 ether, abi.encodeWithSelector(MockRevertingContractForCalls.foo.selector)
+        );
+        assertEq(address(w).balance, balanceBefore);
+        // Garbage call.
+        vm.prank(entryPoint);
+        w.execute(address(c), 1 ether, abi.encodeWithSelector(0xdeadbeef));
+        assertEq(address(w).balance, balanceBefore);
+        // Ok call.
+        vm.prank(entryPoint);
+        w.execute(
+            address(c), 1 ether, abi.encodeWithSelector(MockRevertingContractForCalls.ok.selector)
+        );
+        assertEq(address(w).balance, balanceBefore - 1 ether);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     function testIsValidSignature() public payable {
         bytes32 hash = keccak256(abi.encodePacked('foo()'));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, hash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, toEthSignedMessageHash(hash));
         // ABI encode hash and sig as expected by isValidSignature() / eip-1271.
         bytes memory data = abi.encodeWithSelector(0x1626ba7e, hash, abi.encode(v, r, s));
         (, bytes memory ret) = address(w).staticcall(data);
@@ -166,16 +185,20 @@ contract WalletTest is Test {
         assert(selector == 0x1626ba7e); // Check match.
     }
 
-    // function testIsValidSignatureFromContract() public payable { // note: placeholder.
-    //     bytes32 hash = keccak256(bytes('FOO'));
+    /*function testIsValidSignatureFromContract() public payable {
+        bytes32 hash = keccak256(abi.encodePacked('foo()'));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, toEthSignedMessageHash(hash));
+        // ABI encode hash and sig as expected by isValidSignature() / eip-1271.
+        bytes memory data = abi.encodeWithSelector(0x1626ba7e, hash, abi.encode(v, r, s));
+        (, bytes memory ret) = address(contractWallet).staticcall(data);
 
-    //     (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceKey, hash);
-    //     bytes memory sig = abi.encodePacked(r, s, v);
+        bytes4 selector; // Slice selector return.
+        assembly {
+            selector := mload(add(ret, 0x20))
+        }
 
-    //     bytes4 selector = contractWallet.isValidSignature(hash, sig);
-
-    //     assert(selector == 0x1626ba7e);
-    // }
+        assert(selector == 0x1626ba7e); // Check match.
+    }*/
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -202,6 +225,15 @@ contract WalletTest is Test {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    function toEthSignedMessageHash(bytes32 hash) internal pure returns (bytes32 result) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            mstore(0x20, hash) // Store into scratch space for keccak256.
+            mstore(0x00, '\x00\x00\x00\x00\x19Ethereum Signed Message:\n32') // 28 bytes.
+            result := keccak256(0x04, 0x3c) // `32 * 2 - (32 - 28) = 60 = 0x3c`.
+        }
+    }
+
     function createUserOp(uint pK, uint192 key)
         internal
         view
@@ -218,8 +250,112 @@ contract WalletTest is Test {
         userOp.maxFeePerGas;
         userOp.maxPriorityFeePerGas;
         userOp.paymasterAndData;
-        userOp.signature = sign(pK, IEntryPoint(entryPoint).getUserOpHash(userOp));
+        userOp.signature =
+            sign(pK, toEthSignedMessageHash(IEntryPoint(entryPoint).getUserOpHash(userOp)));
     }
+
+    enum Type {
+        Address,
+        Uint256,
+        Uint8,
+        Bytes32,
+        Bytes,
+        String
+    }
+
+    struct Param {
+        Type pType;
+        uint pSlot;
+        bytes value;
+    }
+
+    struct Permit {
+        address target;
+        bytes4 selector;
+        uint32 validAfter;
+        uint32 validUntil;
+        uint maxValue;
+        Param[] params;
+    }
+
+    function createUserOpPermission(uint pK)
+        internal
+        view
+        returns (Wallet.UserOperation memory userOp)
+    {
+        userOp.sender = address(w);
+        uint16 validAfter = uint16(block.timestamp);
+        uint16 validUntil = uint16(block.timestamp + 1000);
+
+        // Make sure to define the sizes of each field
+
+        // Packing data: Ensure no overlapping of bits by shifting adequately
+        uint192 packedData = uint160(bob);
+        console.log('packedData', packedData);
+        userOp.nonce = IEntryPoint(entryPoint).getNonce(userOp.sender, packedData); // Put Bob as Sig Aggregator.
+
+        // Extract key by right-shifting 64 bits
+        uint key = userOp.nonce >> 64;
+
+        // Unpacking data
+        address extractedBob = address(uint160(key));
+        // uint16 extractedValidUntil = uint16((packedData >> validAfterSize) & ((1 << validUntilSize) - 1));
+        // uint16 extractedValidAfter = uint16(packedData & ((1 << validAfterSize) - 1));
+
+        console.log('nonce', userOp.nonce);
+        console.log('key', key);
+        console.log('bob 1', bob);
+        console.log('bob 2', extractedBob);
+        // console.log('extractedValidUntil', extractedValidUntil);
+        // console.log('extractedValidAfter', extractedValidAfter);
+
+        userOp.initCode;
+        // Build Dummy Permit.
+        Param[] memory nullParam = new Param[](1);
+        nullParam[0].pType = Type.Address;
+        nullParam[0].pSlot = 0;
+        nullParam[0].value = abi.encode(address(0));
+        userOp.callData = abi.encodeWithSignature(
+            'execute(address,uint,bytes)',
+            bob,
+            0,
+            abi.encodeWithSignature(
+                'validateUserPermit(bytes32,Permit)',
+                bytes32(userOp.nonce),
+                Permit(
+                    address(erc20),
+                    MockERC20.transfer.selector,
+                    0,
+                    type(uint32).max,
+                    0.5 ether,
+                    nullParam
+                )
+            )
+        );
+        // Leave rest Null.
+        userOp.callGasLimit;
+        userOp.verificationGasLimit;
+        userOp.preVerificationGas;
+        userOp.maxFeePerGas;
+        userOp.maxPriorityFeePerGas;
+        userOp.paymasterAndData;
+        bytes32 hash = toEthSignedMessageHash(bytes32(key));
+
+        userOp.signature = sign(pK, hash);
+    }
+
+    /*function validateUserPermit(bytes32 permitHash, bytes signature,Permit permit) {
+            // create permitHash from Permit 
+            // check permitHash === permitHashCreatedOnTheContract
+            // ecrecover owner from signed permit 
+            // if owner and permit is valid
+            // check specific permit params
+            // is between timestamp validUntil validAfter 
+            // call.to === permit.target
+            // call.value <= permit.maxValue
+            // if call permitted - 
+            // execute call 
+        }*/
 
     function testValidateUserOp() public payable {
         // Success case.
@@ -228,6 +364,15 @@ contract WalletTest is Test {
 
         vm.prank(entryPoint); // Call as EP and check valid.
         assertEq(w.validateUserOp(userOp, userOpHash, 0), 0); // Return `0` for valid.
+    }
+
+    function testValidateUserOpPermission() public payable {
+        // Success case.
+        Wallet.UserOperation memory userOp = createUserOpPermission(aliceKey);
+        bytes32 userOpHash = IEntryPoint(entryPoint).getUserOpHash(userOp);
+
+        vm.prank(entryPoint); // Call as EP and check valid.
+        assertEq(w.validateUserOp(userOp, userOpHash, 0), uint(uint160(bob))); // Return `bobHash` for valid.
     }
 
     function testBadValidateUserOp() public payable {
@@ -252,4 +397,14 @@ interface IEntryPoint {
     function getUserOpHash(Wallet.UserOperation calldata userOp) external view returns (bytes32);
     function handleOps(Wallet.UserOperation[] calldata ops, address payable beneficiary) external;
     function getNonce(address sender, uint192 key) external view returns (uint nonce);
+}
+
+contract MockRevertingContractForCalls {
+    function foo() public payable {
+        revert('foo');
+    }
+
+    function ok() public payable returns (string memory) {
+        return 'ok';
+    }
 }
