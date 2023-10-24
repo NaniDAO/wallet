@@ -3,20 +3,20 @@ pragma solidity ^0.8.19;
 
 contract Wallet {
     address constant entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
-    bytes32 immutable user;
+    address immutable user;
 
-    constructor(bytes32 _user) payable {
+    constructor(address _user) payable {
         user = _user;
     }
 
     function execute(address to, uint val, bytes calldata data) public payable {
-        bytes32 usr = user; // Place immutable `user` onto stack.
+        address usr = user; // Place immutable `user` onto stack.
         assembly ("memory-safe") {
             // Only the `user` or `entryPoint` have auth for executing wallet operations.
             if iszero(or(eq(caller(), usr), eq(caller(), entryPoint))) { revert(codesize(), 0x00) }
             calldatacopy(0x00, data.offset, data.length) // Copy call `data` to memory.
             // If `val` is not set to max uint256, perform call operation.
-            if xor(val, not(0)) {
+            if iszero(eq(val, not(0))) {
                 pop(call(gas(), to, val, 0x00, data.length, codesize(), 0x00))
                 returndatacopy(0x00, 0x00, returndatasize())
                 return(0x00, returndatasize())
@@ -33,10 +33,10 @@ contract Wallet {
         payable
         returns (uint validationData)
     {
-        bytes32 usr = user; // Place immutable `user` onto stack.
+        address usr = user; // Place immutable `user` onto stack.
         assembly ("memory-safe") {
             let m := mload(0x40) // Cache free memory pointer.
-            if xor(caller(), entryPoint) { revert(codesize(), 0x00) } // Check `entryPoint` auth.
+            if iszero(eq(caller(), entryPoint)) { revert(codesize(), 0x00) } // Check `entryPoint` auth.
             // If `nonce` exceeds 64 bytes, extract signature aggregator as `validationData`.
             // Since hashed value must be signed by user, it is trusted to validate user ops.
             if gt(calldataload(0x84), 0xffffffffffffffff) {
@@ -48,7 +48,7 @@ contract Wallet {
             mstore(0x00, '\x00\x00\x00\x00\x19Ethereum Signed Message:\n32') // 28 bytes.
             mstore(0x00, keccak256(0x04, 0x3c)) // `32 * 2 - (32 - 28) = 60 = 0x3c`.
             calldatacopy(0x20, sub(calldatasize(), 0x60), 0x60) // Copy `v, r, s`.
-            if xor(usr, mload(staticcall(gas(), 0x01, 0x00, 0x80, 0x01, 0x20))) {
+            if iszero(eq(usr, mload(staticcall(gas(), 0x01, 0x00, 0x80, 0x01, 0x20)))) {
                 validationData := 1 // If ecrecover fails, `validationData` is 1.
             }
             // Refund `entryPoint` validation if required.
@@ -60,7 +60,7 @@ contract Wallet {
     }
 
     function isValidSignature(bytes32 hash, bytes calldata signature) public payable {
-        bytes32 usr = user; // Place immutable `user` onto stack.
+        address usr = user; // Place immutable `user` onto stack.
         assembly ("memory-safe") {
             // ERC191 signed data is not supported by EVM, so `hash` prep is manual.
             mstore(0x20, hash) // Store into scratch space for keccak256.

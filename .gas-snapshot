@@ -1,5 +1,5 @@
-WalletFactoryTest:testDeploy() (gas: 245485)
-WalletFactoryTest:testFailDuplicateDeploy() (gas: 8937393460516737117)
+WalletFactoryTest:testDeploy() (gas: 245645)
+WalletFactoryTest:testFailDuplicateDeploy() (gas: 8937393460516737124)
 WalletTest:testBadValidateUserOp() (gas: 29408)
 WalletTest:testExecuteAsEntryPoint() (gas: 13730)
 WalletTest:testExecuteAsOwner() (gas: 15851)

@@ -44,7 +44,7 @@ contract WalletTest is Test {
         aliceHash = bytes32(uint(uint160(alice)));
 
         WalletFactory f = new WalletFactory();
-        w = f.deploy(aliceHash);
+        w = f.deploy(alice, bytes32(0));
 
         payable(address(w)).transfer(100 ether); // Send ETH.
 
@@ -61,9 +61,6 @@ contract WalletTest is Test {
         erc721.mint(address(w), 1); // Mint wallet NFT.
         erc721.mint(alice, 2); // Mint usr NFT.
         erc1155.mint(address(w), 1, 1, ''); // Mint wallet ERC1155.
-
-        //contractWallet = new MockERC1271Wallet(alice); // Placeholder contract w.
-        //contractOwnedW = f.deploy(bytes32(uint(uint160(address(contractWallet)))));
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////
